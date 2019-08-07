@@ -1,0 +1,5 @@
+ML_data/*
+spec_data/*
+DyeCalibration/*
+.ipynb_checkpoints/*
+*.pyc
