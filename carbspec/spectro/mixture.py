@@ -71,7 +71,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):
         A spline describing the molal absorption spectrum of the base
         form of the indicator dye across the entire spectral range.
     weights : bool or array-like
-        If True, fit is weighted by the 1/(S + 1), where S is a spectrum at
+        If True, fit is weighted by the 1/(S**2 + 1), where S is a spectrum at
         pKdye.
         If array-like, an array the same length as data to use as 
         weights (sigma: larger = less weight).
@@ -87,7 +87,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):
     
     if isinstance(weights, bool):
         if weights:
-            w = 1 / (mixture(x) + 1)
+            w = 1 / (mixture(x)**2 + 1)
         else:
             w = None
     else:
@@ -100,10 +100,11 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):
     bstart = float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc))
     astart = float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc))
     
+    # should really re-write this to allow parameter damping and prefer zeros
     return curve_fit(mixture, x, y, p0=(astart, bstart, 0, 0, 1),
                      sigma=w,
-                     bounds=((0, 0, -np.inf, -0.1, 0.9), 
-                             (np.inf, np.inf, np.inf, 0.1, 1.1)))
+                     bounds=((0, 0, -0.1, -0.05, 0.95), 
+                             (np.inf, np.inf, 0.1, 0.05, 1.05)))
 
 def pH_from_F(F, K):
     return -log10(K / F)
