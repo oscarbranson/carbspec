@@ -82,6 +82,8 @@ class Program:
             QtGui.QApplication.processEvents()  # required to update plot
 
     def collectDark(self, line, plot_mode):
+        
+        self.specChanged()
         self.spectrometer.light_off()
         # set pbar bar max
         self.mainWindow.setupPane.spectro['darkProgress'].setMaximum(self.params['spectro']['nScans'])
@@ -98,9 +100,8 @@ class Program:
         self.spectrometer.light_on()
         self.spectrometer.sample_absent()
 
-        lines[0].curve.setData(y=[])
-        lines[1].curve.setData(y=[])
-        self.mainWindow.setupPane.graphs['scale'].lines[0].setData(y=[])
+        self.clearGraph(self.mainWindow.setupPane.graphChannels)
+        self.clearGraph(self.mainWindow.setupPane.graphScale)
 
         pbar = self.mainWindow.setupPane.spectro['scaleProgress']
         pbar.setMaximum(2 * self.params['spectro']['nScans'])
@@ -115,7 +116,7 @@ class Program:
         self.data['channel1'] = self.incremental['signal']
 
         self.data['scaleFactor'] = self.data['channel1'] / self.data['channel0']
-        self.mainWindow.setupPane.graphs['scale'].lines[0].curve.setData(x=self.data['wv'], y=self.data['scaleFactor'])
+        self.mainWindow.setupPane.graphScale.lines[0].curve.setData(x=self.data['wv'], y=self.data['scaleFactor'])
         self.scaleCollected = True  
 
         self.mainWindow.measurePane.collectSpectrum.setDisabled(False)
@@ -123,6 +124,11 @@ class Program:
     def specChanged(self):
         self.darkCollected = False
         self.scaleCollected = False
+
+        self.clearGraph(self.mainWindow.setupPane.graphDark)
+        self.clearGraph(self.mainWindow.setupPane.graphChannels)
+        self.clearGraph(self.mainWindow.setupPane.graphScale)
+        
         # disable
         self.mainWindow.setupPane.spectro['scaleFactor'].setDisabled(True)
         # reset dark spectrum progress bar
@@ -142,31 +148,41 @@ class Program:
         # if any spectro parameter is changed, update the dark
         if parameter in self.params['spectro'].keys():
             self.specChanged()
+        
+        if parameter == 'integrationTime' and val is not None:
+            self.spectrometer.set_integration_time(val)
 
     def collectSpectrum(self, lines, plot_mode):
+        self.mainWindow.measurePane.collectSpectrum.setDisabled(True)
         self.spectrometer.light_on()
         self.spectrometer.sample_present()
         self.spectrometer.newSample()
 
-        self.clearGraph(self.mainWindow.measurePane.graphs['abs'])
-        self.clearGraph(self.mainWindow.measurePane.graphs['raw'])
-        self.clearGraph(self.mainWindow.measurePane.graphs['resid'])
-
-        self.mainWindow.measurePane.graphs['abs'].lines[0].setData(y=[])
-
+        self.clearGraph(self.mainWindow.measurePane.graphAbs)
+        self.clearGraph(self.mainWindow.measurePane.graphRaw)
+        self.clearGraph(self.mainWindow.measurePane.graphResid)
+        
+        pbar = self.mainWindow.measurePane.collectionPBar
+        pbar.setMaximum(2 * self.params['spectro']['nScans'])
+        
         self.spectrometer.channel_0()
-        self.readSpectrometer(line=lines[0], plot_mode=plot_mode)
+        self.readSpectrometer(line=lines[0], plot_mode=plot_mode,
+                              pbar=pbar, pbar_0=0)
         self.data['channel0_unscaled'] = self.incremental['signal']
         self.data['channel0'] = self.data['channel0_unscaled'] * self.data['scaleFactor']
 
         self.spectrometer.channel_1()
-        self.readSpectrometer(line=lines[1], plot_mode=plot_mode)
+        self.readSpectrometer(line=lines[1], plot_mode=plot_mode,
+                              pbar=pbar, pbar_0=self.params['spectro']['nScans'])
         self.data['channel1'] = self.incremental['signal']
 
         self.data['absorption'] = np.log10((self.data['channel0'] - self.data['dark']) / (self.data['channel1'] - self.data['dark']))
-        self.mainWindow.measurePane.graphs['abs'].lines[0].setData(x=self.data['wv'], y=self.data['absorption'])
+        self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.data['wv'], y=self.data['absorption'])
 
         self.fitMCP()
+
+        self.mainWindow.measurePane.collectSpectrum.setDisabled(False)
+
     
     def fitMCP(self):
         splines = load_dye_splines('MCP')
@@ -184,7 +200,7 @@ class Program:
         pH = pH_from_F(F, K_MCP)
 
         # draw curves
-        graph = self.mainWindow.measurePane.graphs['abs']
+        graph = self.mainWindow.measurePane.graphAbs
         mixture = make_mix_spectra(splines['acid'], splines['base'])
         x = self.data['wv']
         pred = mixture(x, *p)
@@ -194,18 +210,18 @@ class Program:
         base = baseline + splines['base'](xm) * p[1]
 
         graph.lines['pred'] = pg.PlotDataItem(x=x, y=pred, pen=pg.mkPen(color=styles.colour_main, width=2, style=QtCore.Qt.DashLine))
-        graph.graph.addItem(graph.lines['pred'])
+        graph.addItem(graph.lines['pred'])
 
         acid_color = list(styles.colour_dark) + [100]
         graph.lines['acid'] = pg.PlotCurveItem(x=x, y=acid, brush=pg.mkBrush(*acid_color), fillLevel=0.0, pen=(0,0,0,100))
-        graph.graph.addItem(graph.lines['acid'])
+        graph.addItem(graph.lines['acid'])
 
         base_color = list(styles.colour_main) + [100]
         graph.lines['base'] = pg.PlotCurveItem(x=x, y=base, brush=pg.mkBrush(*base_color), fillLevel=0.0, pen=(0,0,0,100))
-        graph.graph.addItem(graph.lines['base'])
+        graph.addItem(graph.lines['base'])
 
         # plot residual
-        rgraph = self.mainWindow.measurePane.graphs['resid']
+        rgraph = self.mainWindow.measurePane.graphResid
         rgraph.lines[0].setData(x=x, y=self.data['absorption'] - pred)
     
     

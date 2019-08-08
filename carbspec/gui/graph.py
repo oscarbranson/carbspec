@@ -21,7 +21,7 @@ class GraphWidget(qt.QWidget):
 
         self.view.setBackground(None)
 
-        self.graph = pg.PlotItem(background=styles.graphBkg)
+        self.graph = pg.PlotItem(background=None)
         self.graphLayout.addItem(self.graph)
 
         self.lines = {}
@@ -37,3 +37,19 @@ class GraphWidget(qt.QWidget):
         self.yaxis.setPen(styles.graphPen)
 
         self.layout.addWidget(self.view, 1)
+
+class GraphItem(pg.PlotItem):
+    def __init__(self, nlines=1):
+        super().__init__()
+    
+        self.lines = {}
+        self.pens = {}
+        for i in range(nlines):
+            self.pens[i] = pg.mkPen(color_order[i], width=2)
+            self.lines[i] = pg.PlotDataItem([], [], pen=self.pens[i])
+            self.addItem(self.lines[i])
+
+        self.xaxis = self.getAxis('bottom')
+        self.yaxis = self.getAxis('left')
+        self.xaxis.setPen(styles.graphPen)
+        self.yaxis.setPen(styles.graphPen)

@@ -24,48 +24,36 @@ class MainWindow(qt.QMainWindow):
         self.screenSize = qt.QDesktopWidget().screenGeometry ( -1 )
         self.resize (self.screenSize.width(), self.screenSize.height())
 
-        self.palette = self.palette()
-        
-        # We move on to build the UI
-        self.initUI()
-
-    def initUI(self):
-        
-
-        self.mainWidget = qt.QWidget()
-        self.setCentralWidget(self.mainWidget)
-
         # running program object
         self.program = Program(self)
 
-        # principalLayout is a vertical box that runs down the entire window
-        self.principalLayout = qt.QVBoxLayout(self.mainWidget)
+        # We move on to build the UI
+        self.initUI()
+
+        self.set_styleSheet()
+
+    def initUI(self):
+
+        self.mainWidget = qt.QWidget()
+        self.setCentralWidget(self.mainWidget)
+        self.mainLayout = qt.QVBoxLayout(self.mainWidget)
 
         # The file menu is produced here
         # self.initFileMenu()
 
-        # mainStack moves between views that occupy the entire window
-        self.mainStack = qt.QStackedWidget()
-
-        # Add the mainStack to the principalLayout
-        self.principalLayout.addWidget(self.mainStack)
-
-        # Layout to hold the tabs
-        self.stageTabsWidget = qt.QWidget()
-        self.stagesLayout = qt.QVBoxLayout(self.stageTabsWidget)
-        self.mainStack.addWidget(self.stageTabsWidget)
-
         # create tabs widget
         self.tabs = qt.QTabWidget()
-        self.stagesLayout.addWidget(self.tabs)
+        self.mainLayout.addWidget(self.tabs)
 
         # Setup collection tab
-        self.setupTab = qt.QWidget()
+        self.setupTab = qt.QWidget(objectName='tabcontents')
+        # self.setupTab.setPalette(self.palette)
         self.setupPane = setupPane(self)
         self.tabs.addTab(self.setupTab, 'Setup')
         
         # data collection tab
-        self.measureTab = qt.QWidget()
+        self.measureTab = qt.QWidget(objectName='tabcontents')
+        # self.measureTab.setPalette(self.palette)
         self.measurePane = measurePane(self)
         self.tabs.addTab(self.measureTab, 'Measure')
 
@@ -74,19 +62,24 @@ class MainWindow(qt.QMainWindow):
         # self.optionsTab.layout = qt.QVBoxLayout()
         # self.optionsTab.setLayout(self.optionsTab.layout)
         # self.tabs.addTab(self.optionsTab, 'Options')
+    
+    def set_styleSheet(self):
+        with open('./stylesheet.qss', 'r') as f:
+            styleSheet = f.read()
+        self.setStyleSheet(styleSheet)
 
 if __name__ == '__main__':
     app = qt.QApplication([])
     
     app.setStyle('Fusion')
 
-    palette = app.palette()
-    palette.setColor(QtGui.QPalette.Text, QtGui.QColor(*styles.colour_darker))
-    palette.setColor(QtGui.QPalette.Button, QtGui.QColor(*styles.colour_lighter))
+    # palette = app.palette()
+    # palette.setColor(QtGui.QPalette.Text, QtGui.QColor(*styles.colour_darker))
+    # palette.setColor(QtGui.QPalette.Button, QtGui.QColor(*styles.colour_lighter))
 
-    app.setPalette(palette)
+    # app.setPalette(palette)
 
-    app.setStyleSheet(styles.styleSheet)
+    # app.setStyleSheet(styles.styleSheet)
     
     main = MainWindow()
     main.show()

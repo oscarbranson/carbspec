@@ -6,7 +6,7 @@ import numpy as np
 from functools import partial
 
 import styles
-from graph import GraphWidget
+from graph import GraphItem
 
 def dummyConnect(*args, **kwargs):
     """
@@ -61,11 +61,10 @@ class measurePane:
     def dataAcquisition(self, *pos):
 
         self.measPane = qt.QWidget()
-        self.measPane.setStyleSheet("background: " + styles.colour_lighter_str)
         self.measLayout = qt.QVBoxLayout()
         self.measPane.setLayout(self.measLayout)
 
-        label = qt.QLabel("Data Acquisition", styleSheet=styles.title)
+        label = qt.QLabel("Data Acquisition", objectName="title")
         self.measLayout.addWidget(label)
         self.measLayout.addWidget(Hline())
 
@@ -87,22 +86,25 @@ class measurePane:
 
         self.collectSpectrum = qt.QPushButton('Collect Spectrum')
         self.collectSpectrum.setShortcut('Ctrl+Return')
-        if not self.program.scaleCollected:
-            self.collectSpectrum.setDisabled(True)
+        self.collectSpectrum.setDisabled(True)
         self.measLayout.addWidget(self.collectSpectrum)
+
+        self.collectionPBar = qt.QProgressBar()
+        self.collectionPBar.setTextVisible(False)
+        self.measLayout.addWidget(self.collectionPBar)
         
-        label2 = qt.QLabel("Data Processing", styleSheet=styles.title)
+        label2 = qt.QLabel("Data Processing", objectName='title')
         self.measLayout.addWidget(label2)
         self.measLayout.addWidget(Hline())
 
         self.modeTabs = qt.QTabWidget()
         self.measLayout.addWidget(self.modeTabs)
 
-        phPane = qt.QWidget()
+        phPane = qt.QWidget(objectName='tabcontents')
         phLayout = qt.QVBoxLayout(phPane)
         self.modeTabs.addTab(phPane, 'pH (MCP)')
 
-        alkPane = qt.QWidget()
+        alkPane = qt.QWidget(objectName='tabcontents')
         alkLayout = qt.QVBoxLayout(alkPane)
         self.modeTabs.addTab(alkPane, 'Alkalinity (BPB)')
 
@@ -118,37 +120,42 @@ class measurePane:
         self.measLayout.addWidget(self.last5Table)
 
         self.layout.addWidget(self.measPane, *pos)
-
+    
     def setupGraphs(self, *pos):
         self.graphPane = qt.QWidget()
-        self.graphPane.setStyleSheet("background: " + styles.colour_lighter_str)
-        self.graphLayout = qt.QVBoxLayout()
-        self.graphPane.setLayout(self.graphLayout)
+        self.graphLayout = qt.QVBoxLayout(self.graphPane)
         
+        graphLayout = pg.GraphicsLayoutWidget()
+        graphLayout.setBackground(None)
+        self.graphLayout.addWidget(graphLayout)
+
         # raw data graph
-        graphRaw = GraphWidget(self, 2)
-        graphRaw.graph.setLabel('left', "Intensity", styleSheet=styles.label)
-        self.graphs['raw'] = graphRaw
-        self.graphLayout.addWidget(graphRaw)
-        self.graphLayout.setStretch(0, 1)
+        self.graphRaw = GraphItem(2)
+        graphLayout.addItem(self.graphRaw, 0, 0)
+        self.graphRaw.setLabel('left', "Intensity")
 
         # absorption spectrum
-        graphAbs = GraphWidget(self)
-        graphAbs.graph.setLabel('left', "Absorption", styleSheet=styles.label)
-        self.graphs['abs'] = graphAbs
-        self.graphLayout.addWidget(graphAbs)
-        self.graphLayout.setStretch(1, 2)
+        self.graphAbs = GraphItem()
+        graphLayout.addItem(self.graphAbs, 1, 0)
+        self.graphAbs.setLabel('left', "Absorption")
 
         # fit residual
-        graphResidual = GraphWidget(self)
-        graphResidual.graph.setLabel('left', "Residual", styleSheet=styles.label)
-        self.graphs['resid'] = graphResidual
-        self.graphLayout.addWidget(graphResidual)
-        self.graphLayout.setStretch(2, 1)
+        self.graphResid = GraphItem()
+        graphLayout.addItem(self.graphResid, 2, 0)
+        self.graphResid.setLabel('left', "Residual")
+        self.graphResid.setLabel('bottom', "Wavelength")
 
-        self.graphLayout.addStretch()
+        graphLayout.ci.layout.setRowStretchFactor(0,1)
+        graphLayout.ci.layout.setRowStretchFactor(1, 2)
+        graphLayout.ci.layout.setRowStretchFactor(2, 1)
+
+        # link X axes
+        self.graphAbs.setXLink(self.graphRaw)
+        self.graphResid.setXLink(self.graphRaw)
+
+        # self.graphLayout.addStretch()
         self.layout.addWidget(self.graphPane, *pos)
 
     def connections(self):
         # measure and display spectrum
-        self.collectSpectrum.clicked.connect(partial(self.program.collectSpectrum, self.graphs['raw'].lines, 'incremental'))
+        self.collectSpectrum.clicked.connect(partial(self.program.collectSpectrum, self.graphRaw.lines, 'incremental'))
