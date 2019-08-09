@@ -5,7 +5,10 @@ from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
 from carbspec.dye import calc_KBPB, calc_KMCP
 from carbspec.splines import load_dye_splines
 import pyqtgraph as pg
-from uncertainties.unumpy import nominal_values
+import uncertainties as un
+from uncertainties.unumpy import nominal_values, std_devs
+
+import pandas as pd
 
 import styles
 
@@ -21,8 +24,14 @@ class Program:
         self.darkCollected = False
         self.scaleCollected = False
 
+        self.mode = 'MCP'
+        self.splines = load_dye_splines(self.mode)
+
+        self.saveDir = '~/carbspec'
+
         # data placeholder
         self.data = {}
+        self.df = pd.DataFrame(index=[0], columns=['Sample', 'mode', 'a', 'b', 'bkg', 'C0', 'C1', 'F', 'Temp', 'Sal', 'K', 'pH'])
 
         self.live = {}
         self.live['wv'] = []
@@ -54,6 +63,9 @@ class Program:
 
         self.connectSpectrometer()
     
+    def findSpectrometer(self):
+        return ['Spec1', 'Spec2']
+    
     def connectSpectrometer(self):
         self.spectrometer = Spectrometer()
         self.data['wv'] = self.spectrometer.wv
@@ -80,6 +92,9 @@ class Program:
                 pbar.setValue(i + 1 + pbar_0)
 
             QtGui.QApplication.processEvents()  # required to update plot
+
+    def readTemp(self):
+        return np.random.uniform(22,27)
 
     def collectDark(self, line, plot_mode):
         
@@ -171,43 +186,60 @@ class Program:
         self.data['channel0_unscaled'] = self.incremental['signal']
         self.data['channel0'] = self.data['channel0_unscaled'] * self.data['scaleFactor']
 
+        t0 = self.readTemp()
         self.spectrometer.channel_1()
         self.readSpectrometer(line=lines[1], plot_mode=plot_mode,
                               pbar=pbar, pbar_0=self.params['spectro']['nScans'])
         self.data['channel1'] = self.incremental['signal']
-
+        t1 = self.readTemp()
+        
         self.data['absorption'] = np.log10((self.data['channel0'] - self.data['dark']) / (self.data['channel1'] - self.data['dark']))
         self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.data['wv'], y=self.data['absorption'])
 
-        self.fitMCP()
+        self.data['temp'] = np.mean([t0, t1])
+
+        self.fitSpectrum()
 
         self.mainWindow.measurePane.collectSpectrum.setDisabled(False)
 
-    
-    def fitMCP(self):
-        splines = load_dye_splines('MCP')
+
+    def fitSpectrum(self):
 
         sal = 35
-        temp = 25
-
-        K_MCP = calc_KMCP(temp, sal)
         
-        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], splines['acid'], splines['base'], weights=True)
-        p = nominal_values(p)
+        if self.mode == 'MCP':
+            K = calc_KMCP(self.data['temp'], sal)
+        elif self.mode == 'BPB':
+            K = calc_KBPB(sal, self.data['temp'])
+        
+        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.splines['acid'], self.splines['base'], weights=True)
 
-        F = p[1] / p[0]
+        self.p = un.correlated_values(p, cov)
 
-        pH = pH_from_F(F, K_MCP)
+        F = self.p[1] / self.p[0]
 
+        pH = pH_from_F(F, K)
+        
+        self.storeResult(K, F, pH)
+        self.updateFitGraph()
+
+    def storeResult(self, K, F, pH):
+        i = self.df.index.max() + 1
+        self.df.loc[i, ['a', 'b', 'bkg', 'C0', 'C1']] = self.p
+        self.df.loc[i, ['mode']] = self.mode
+        self.df.loc[i, ['K', 'F', 'pH']] = K, F, pH
+    
+    def updateFitGraph(self):
+        p = nominal_values(self.p)
         # draw curves
         graph = self.mainWindow.measurePane.graphAbs
-        mixture = make_mix_spectra(splines['acid'], splines['base'])
+        mixture = make_mix_spectra(self.splines['acid'], self.splines['base'])
         x = self.data['wv']
         pred = mixture(x, *p)
         baseline = np.full(x.size, p[2])
         xm = p[-2] + x * p[-1]
-        acid = baseline + splines['acid'](xm) * p[0]
-        base = baseline + splines['base'](xm) * p[1]
+        acid = baseline + self.splines['acid'](xm) * p[0]
+        base = baseline + self.splines['base'](xm) * p[1]
 
         graph.lines['pred'] = pg.PlotDataItem(x=x, y=pred, pen=pg.mkPen(color=styles.colour_main, width=2, style=QtCore.Qt.DashLine))
         graph.addItem(graph.lines['pred'])
@@ -223,7 +255,24 @@ class Program:
         # plot residual
         rgraph = self.mainWindow.measurePane.graphResid
         rgraph.lines[0].setData(x=x, y=self.data['absorption'] - pred)
+
+    def clearFitGraph(self):
+        graph = self.mainWindow.measurePane.graphAbs
+        graph.lines['pred'].setData(y=[])
+        graph.lines['acid'].setData(y=[])
+        graph.lines['base'].setData(y=[])
+        rgraph = self.mainWindow.measurePane.graphResid
+        rgraph.lines[0].setData(y=[])
     
+    def modeChange(self, i):
+        modes = ['MCP', 'BPB']
+        self.mode = modes[i]
+
+        self.splines = load_dye_splines(self.mode)
+
+        if 'absorption' in self.data:
+            self.clearFitGraph()
+            self.fitSpectrum()
     
     def clearGraph(self, graph):
         for line in graph.lines.values():
