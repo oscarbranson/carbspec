@@ -54,10 +54,6 @@ class measurePane:
         
         self.connections()
 
-    def chooseDirectory(self):
-        self.saveDir = qt.QFileDialog.getExistingDirectory(self.mainWindow.measureTab, 'Choose Save Directory', self.saveDir, qt.QFileDialog.ShowDirsOnly)
-        self.saveDirLabel.setText(self.saveDir)
-
     def dataAcquisition(self, *pos):
 
         self.measPane = qt.QWidget()
@@ -74,13 +70,6 @@ class measurePane:
         self.sampleName = qt.QLineEdit('SampleName')
         fileLayout.addWidget(qt.QLabel('Sample Name:'), 1, 0, 1, 1)
         fileLayout.addWidget(self.sampleName, 1, 1, 1, 3)
-
-        getDirectory = qt.QPushButton("Save in...")
-        getDirectory.clicked.connect(self.chooseDirectory)
-        fileLayout.addWidget(getDirectory, 0, 0, 1, 1)
-
-        self.saveDirLabel = qt.QLabel(self.saveDir)
-        fileLayout.addWidget(self.saveDirLabel, 0, 1, 1, 3)
 
         self.measLayout.addWidget(filePaths)
 
@@ -159,3 +148,5 @@ class measurePane:
     def connections(self):
         # measure and display spectrum
         self.collectSpectrum.clicked.connect(partial(self.program.collectSpectrum, self.graphRaw.lines, 'incremental'))
+
+        self.modeTabs.currentChanged.connect(self.program.modeChange)
