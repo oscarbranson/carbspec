@@ -51,12 +51,13 @@ QWidget {
 QPushButton {
     border-radius: 3px;
     background-color: #b8cde0;
-    border: 1px solid #1f3447;
+    border: 1px solid #5f8eb9;
     min-height: 25px;
 }
 
 QPushButton:hover {
-    border: 2px solid #1f3447;
+    /* border: 2px solid #1f3447; */
+    background-color: #5f8eb9;
 }
 
 QPushButton:pressed {
@@ -65,7 +66,7 @@ QPushButton:pressed {
 
 QPushButton:disabled {
     border-radius: 3px;
-    background-color: #b8cde0;
+    background-color: #dce6ef;
     border: 1px solid #5f8eb9;
     color: #5f8eb9;
 }
@@ -83,4 +84,12 @@ QProgressBar {
 QProgressBar:chunk {
     background-color: #3e678e;
     color: #1f3447;
+}
+
+QLineEdit {
+    background-color: white;
+}
+
+QComboBox {
+    font: normal 10pt;
 }
