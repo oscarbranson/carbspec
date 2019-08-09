@@ -17,6 +17,8 @@ class Spectrometer:
         self.bkg = 1800 / 5  # background at 1 ms
         self.noise = 500  # noise at 1ms
 
+        self.connected = True
+
         self.integration_time = 10
         
         self.wv = np.arange(350, 700)
@@ -64,3 +66,39 @@ class Spectrometer:
                     return I0
         else:
             return np.random.normal(self.bkg, self.noise / self.integration_time, self.wv.size)
+
+class TempProbe:
+    def __init__(self):
+        self.lastTemp = self.read()
+        self.connected = True
+
+    def read(self):
+        return np.random.normal(25, 2)
+
+class BeamSwitch:
+    def __init__(self):
+        self.channel = 0
+        self.connected = True
+    
+    def switch(self):
+        if self.channel == 0:
+            self.channel = 1
+        else:
+            self.channel = 0
+    
+    def channel_0(self):
+        self.channel = 0
+    
+    def channel_1(self):
+        self.channel = 1
+
+class LightSource:
+    def __init__(self):
+        self.on = True
+        self.connected = True
+
+    def turn_on(self):
+        self.on = True
+
+    def turn_off(self):
+        self.on = False
