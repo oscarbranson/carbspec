@@ -57,6 +57,11 @@ class MainWindow(qt.QMainWindow):
         self.measurePane = measurePane(self)
         self.tabs.addTab(self.measureTab, 'Measure')
 
+        reloadStyle = qt.QPushButton('Reload Stylesheet')
+        self.mainLayout.addWidget(reloadStyle)
+        reloadStyle.setShortcut('Shift+Ctrl+R')
+        reloadStyle.clicked.connect(self.set_styleSheet)
+
         # # settings tab
         # self.optionsTab = qt.QWidget()
         # self.optionsTab.layout = qt.QVBoxLayout()
