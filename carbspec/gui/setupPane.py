@@ -179,17 +179,17 @@ class setupPane:
         optGrid.addWidget(self.statusTemp, 0, 4)
 
         
-        calib_c = qt.QLineEdit(str(self.program.params['temp']['calib_c']))
-        calib_c.setValidator(qg.QDoubleValidator())
-        self.temp['calib_c'] = calib_c
+        temp_c = qt.QLineEdit(str(self.program.params['temp']['temp_c']))
+        temp_c.setValidator(qg.QDoubleValidator())
+        self.temp['temp_c'] = temp_c
         optGrid.addWidget(qt.QLabel('Temp Offset:'), 1, 0, alignment=QtCore.Qt.AlignRight)
-        optGrid.addWidget(calib_c, 1, 1)
+        optGrid.addWidget(temp_c, 1, 1)
 
-        calib_m = qt.QLineEdit(str(self.program.params['temp']['calib_m']))
-        calib_m.setValidator(qg.QDoubleValidator())
-        self.temp['calib_m'] = calib_m
+        temp_m = qt.QLineEdit(str(self.program.params['temp']['temp_m']))
+        temp_m.setValidator(qg.QDoubleValidator())
+        self.temp['temp_m'] = temp_m
         optGrid.addWidget(qt.QLabel('Temp Slope:'), 1, 2, alignment=QtCore.Qt.AlignRight)
-        optGrid.addWidget(calib_m, 1, 3)
+        optGrid.addWidget(temp_m, 1, 3)
 
         self.tempLayout.addWidget(optPane)
 
@@ -234,11 +234,14 @@ class setupPane:
         self.layout.addWidget(self.graphPane, *pos)
 
     def connections(self):
-        # change integration time
+        # change integration time or nscans
         self.spectro['integrationTime'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'integrationTime', int))
-        # change n replicates
         self.spectro['nScans'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'nScans', int))
         
+        # temp calibration changed
+        self.temp['temp_c'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_c', int))
+        self.temp['temp_m'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_m', int))
+
         # measure and display dark spectrum
         self.spectro['darkSpectrum'].clicked.connect(partial(self.program.collectDark, self.graphDark.lines[0], 'incremental'))
 

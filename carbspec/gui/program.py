@@ -7,6 +7,8 @@ from carbspec.splines import load_dye_splines
 import pyqtgraph as pg
 import uncertainties as un
 from uncertainties.unumpy import nominal_values, std_devs
+from configparser import ConfigParser
+import pkg_resources as pkgrs
 
 import pandas as pd
 
@@ -25,10 +27,7 @@ class Program:
         self.scaleCollected = False
 
         self.mode = 'MCP'
-        self.splines = load_dye_splines(self.mode)
-
-        self.saveDir = '~/carbspec'
-
+        
         # data placeholder
         self.data = {}
         self.df = pd.DataFrame(index=[0], columns=['Sample', 'mode', 'a', 'b', 'bkg', 'C0', 'C1', 'F', 'Temp', 'Sal', 'K', 'pH'])
@@ -50,8 +49,8 @@ class Program:
         
         # Temperature Probe Parameters
         self.params['temp'] = {
-            'calib_m': 1,
-            'calib_c': 0,
+            'temp_m': 1,
+            'temp_c': 0,
             'commLink': None
             }
         # Spectrometer Parameters
@@ -61,8 +60,37 @@ class Program:
             'nScans': 50
         }
 
+        self._rsrcpath = pkgrs.resource_filename('carbspec', '/gui/resources/')
+        self._cfgfile = self._rsrcpath + 'carbspec.cfg'
+
+        self.loadConfig()
         self.connectSpectrometer()
-    
+
+        self.modeSet(self.mode)
+
+    def loadConfig(self):
+        self.config = ConfigParser()
+        self.config.read(self._cfgfile)
+
+        self.params['spectro']['integrationTime'] = self.config['Last'].get('integrationTime')
+        self.params['spectro']['nScans'] = self.config['Last'].get('nScans')
+
+        self.params['temp']['temp_m'] = self.config['Last'].get('temp_m')
+        self.params['temp']['temp_c'] = self.config['Last'].get('temp_c')
+
+        self.saveDir = self.config['Last'].get('saveDir')
+        self.mode = self.config['Last'].get('mode')
+
+    def writeConfig(self):
+        with open(self._cfgfile, 'w') as f:
+            self.config.write(f)
+
+    def updateConfig(self, parameter, value):
+        if parameter in self.config['DEFAULT']:
+            self.config.set('Last', parameter, str(value))
+        
+        self.writeConfig()
+
     def findSpectrometer(self):
         return ['Spec1', 'Spec2']
     
@@ -166,6 +194,9 @@ class Program:
         
         if parameter == 'integrationTime' and val is not None:
             self.spectrometer.set_integration_time(val)
+        
+        if val is not None:
+            self.updateConfig(parameter, val)
 
     def collectSpectrum(self, lines, plot_mode):
         self.mainWindow.measurePane.collectSpectrum.setDisabled(True)
@@ -264,9 +295,14 @@ class Program:
         rgraph = self.mainWindow.measurePane.graphResid
         rgraph.lines[0].setData(y=[])
     
-    def modeChange(self, i):
+    def modeSet(self, i):
         modes = ['MCP', 'BPB']
-        self.mode = modes[i]
+        if i in modes:
+            self.mode = i
+        elif isinstance(i, int):
+            self.mode = modes[i]
+        else:
+            ValueError('i musst be an integer or a string')
 
         self.splines = load_dye_splines(self.mode)
 

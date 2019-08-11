@@ -149,4 +149,4 @@ class measurePane:
         # measure and display spectrum
         self.collectSpectrum.clicked.connect(partial(self.program.collectSpectrum, self.graphRaw.lines, 'incremental'))
 
-        self.modeTabs.currentChanged.connect(self.program.modeChange)
+        self.modeTabs.currentChanged.connect(self.program.modeSet)
