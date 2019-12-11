@@ -73,6 +73,16 @@ class MainWindow(qt.QMainWindow):
             styleSheet = f.read()
         self.setStyleSheet(styleSheet)
 
+    def closeEvent(self, event):
+        self.program.writeConfig()
+        event.accept()
+    
+    def ping(self):
+        print('ping')
+
+    def exit(self):
+        app.exit()
+
 if __name__ == '__main__':
     app = qt.QApplication([])
     

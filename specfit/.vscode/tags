@@ -1,0 +1,155 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	0.0.0	/3fdf28bc/
+GraphWidget	../gui/graph.py	/^class GraphWidget(qt.QWidget):$/;"	kind:class	line:8
+Hline	../gui/measurePane.py	/^def Hline():$/;"	kind:function	line:28
+Hline	../gui/setupPane.py	/^def Hline():$/;"	kind:function	line:28
+MainWindow	../gui/app.py	/^class MainWindow(qt.QMainWindow):$/;"	kind:class	line:10
+Program	../gui/program.py	/^class Program:$/;"	kind:class	line:12
+Spectrometer	../gui/dummyInstruments.py	/^class Spectrometer:$/;"	kind:class	line:11
+TA_from_pH	../alkalinity.py	/^def TA_from_pH(pH, m_sample, m_acid, sal, temp, C_acid, C_dye=0):$/;"	kind:function	line:4
+__init__	../gui/app.py	/^    def __init__(self):$/;"	kind:member	line:15
+__init__	../gui/dummyInstruments.py	/^    def __init__(self):$/;"	kind:member	line:12
+__init__	../gui/graph.py	/^    def __init__(self, parent, nlines=1):$/;"	kind:member	line:10
+__init__	../gui/measurePane.py	/^    def __init__(self, mainWindow):$/;"	kind:member	line:35
+__init__	../gui/program.py	/^    def __init__(self, mainWindow):$/;"	kind:member	line:13
+__init__	../gui/setupPane.py	/^    def __init__(self, mainWindow):$/;"	kind:member	line:35
+__init__.py	../__init__.py	1;"	kind:file	line:1
+__init__.py	../gui/__init__.py	1;"	kind:file	line:1
+__init__.py	../spectro/__init__.py	1;"	kind:file	line:1
+alkalinity.py	../alkalinity.py	1;"	kind:file	line:1
+app	../gui/app.py	/^    app = qt.QApplication([])$/;"	kind:variable	line:81
+app.py	../gui/app.py	1;"	kind:file	line:1
+calc_KBPB	../dye.py	/^def calc_KBPB(sal, temp):$/;"	kind:function	line:35
+calc_KF	../species.py	/^def calc_KF(TempC, Sal):$/;"	kind:function	line:14
+calc_KMCP	../dye.py	/^def calc_KMCP(temp, sal=35, mode='tris'):$/;"	kind:function	line:58
+calc_KS	../species.py	/^def calc_KS(TempC, Sal):$/;"	kind:function	line:48
+calc_R25	../spectro/two_point.py	/^def calc_R25(R, temp):$/;"	kind:function	line:98
+calc_R_from_peaks	../spectro/two_point.py	/^def calc_R_from_peaks(peaks):$/;"	kind:function	line:89
+calc_TF	../species.py	/^def calc_TF(Sal):$/;"	kind:function	line:4
+calc_TS	../species.py	/^def calc_TS(Sal):$/;"	kind:function	line:38
+calc_pH_Tris	../helpers.py	/^def calc_pH_Tris(sal, tempC):$/;"	kind:function	line:3
+calc_pKBPB	../dye.py	/^def calc_pKBPB(sal):$/;"	kind:function	line:5
+channel_0	../gui/dummyInstruments.py	/^    def channel_0(self):$/;"	kind:member	line:30
+channel_1	../gui/dummyInstruments.py	/^    def channel_1(self):$/;"	kind:member	line:33
+choice	../gui/styles.py	/^choice = "font: 10pt; color: rgb({}, {}, {})".format(*colour_dark)$/;"	kind:variable	line:21
+chooseDirectory	../gui/measurePane.py	/^    def chooseDirectory(self):$/;"	kind:member	line:57
+clearGraph	../gui/program.py	/^    def clearGraph(self, graph):$/;"	kind:member	line:212
+collectDark	../gui/program.py	/^    def collectDark(self, line, plot_mode):$/;"	kind:member	line:84
+collectScaleFactor	../gui/program.py	/^    def collectScaleFactor(self, lines, plot_mode):$/;"	kind:member	line:97
+collectSpectrum	../gui/program.py	/^    def collectSpectrum(self, lines, plot_mode):$/;"	kind:member	line:146
+color_order	../gui/graph.py	/^color_order = [styles.colour_darker, styles.colour_main, styles.colour_light]$/;"	kind:variable	line:6
+colour_dark	../gui/styles.py	/^colour_dark = (62, 103, 142)$/;"	kind:variable	line:9
+colour_dark_str	../gui/styles.py	/^colour_dark_str = "rgb({}, {}, {})".format(*colour_dark)$/;"	kind:variable	line:15
+colour_darker	../gui/styles.py	/^colour_darker = (31, 52, 71)$/;"	kind:variable	line:10
+colour_darker_str	../gui/styles.py	/^colour_darker_str = "rgb({}, {}, {})".format(*colour_darker)$/;"	kind:variable	line:16
+colour_light	../gui/styles.py	/^colour_light = (184, 205, 224)$/;"	kind:variable	line:7
+colour_light_str	../gui/styles.py	/^colour_light_str = "rgb({}, {}, {})".format(*colour_light)$/;"	kind:variable	line:13
+colour_lighter	../gui/styles.py	/^colour_lighter = (220, 230, 239)$/;"	kind:variable	line:8
+colour_lighter_str	../gui/styles.py	/^colour_lighter_str = "rgb({}, {}, {})".format(*colour_lighter)$/;"	kind:variable	line:14
+colour_main	../gui/styles.py	/^colour_main = (95, 142, 185)$/;"	kind:variable	line:6
+colour_main_str	../gui/styles.py	/^colour_main_str = "rgb({}, {}, {})".format(*colour_main)$/;"	kind:variable	line:12
+connectSpectrometer	../gui/program.py	/^    def connectSpectrometer(self):$/;"	kind:member	line:57
+connections	../gui/measurePane.py	/^    def connections(self):$/;"	kind:member	line:152
+connections	../gui/setupPane.py	/^    def connections(self):$/;"	kind:member	line:214
+dataAcquisition	../gui/measurePane.py	/^    def dataAcquisition(self, *pos):$/;"	kind:member	line:61
+dummyConnect	../gui/measurePane.py	/^def dummyConnect(*args, **kwargs):$/;"	kind:function	line:11
+dummyConnect	../gui/setupPane.py	/^def dummyConnect(*args, **kwargs):$/;"	kind:function	line:11
+dummyInstruments.py	../gui/dummyInstruments.py	1;"	kind:file	line:1
+dye.py	../dye.py	1;"	kind:file	line:1
+e1	../spectro/two_point.py	/^def e1(TK):$/;"	kind:function	line:239
+e3_e2	../spectro/two_point.py	/^def e3_e2(TK, S):$/;"	kind:function	line:242
+fitMCP	../gui/program.py	/^    def fitMCP(self):$/;"	kind:member	line:171
+graph.py	../gui/graph.py	1;"	kind:file	line:1
+graphBkg	../gui/styles.py	/^graphBkg = None$/;"	kind:variable	line:38
+graphPen	../gui/styles.py	/^graphPen = pg.mkPen(colour_darker, width=2)$/;"	kind:variable	line:37
+helpers.py	../helpers.py	1;"	kind:file	line:1
+initUI	../gui/app.py	/^    def initUI(self):$/;"	kind:member	line:32
+io.py	../io.py	1;"	kind:file	line:1
+label	../gui/styles.py	/^label = "font: bold 10pt; color: rgb({}, {}, {})".format(*colour_darker)$/;"	kind:variable	line:20
+light_off	../gui/dummyInstruments.py	/^    def light_off(self):$/;"	kind:member	line:39
+light_on	../gui/dummyInstruments.py	/^    def light_on(self):$/;"	kind:member	line:36
+list_available	../splines.py	/^def list_available(file=None):$/;"	kind:function	line:70
+load_dye_splines	../splines.py	/^def load_dye_splines(dye='BPB', file=None):$/;"	kind:function	line:61
+load_spectrum	../io.py	/^def load_spectrum(file, low=400, high=700, colname_row=0, colname_sep='\\t'):$/;"	kind:function	line:3
+load_spline_tcks	../splines.py	/^def load_spline_tcks(file=None):$/;"	kind:function	line:5
+logk2e2	../spectro/two_point.py	/^def logk2e2(TK, S):$/;"	kind:function	line:232
+main	../gui/app.py	/^    main = MainWindow()$/;"	kind:variable	line:93
+makeDummy	../gui/measurePane.py	/^def makeDummy():$/;"	kind:function	line:20
+makeDummy	../gui/setupPane.py	/^def makeDummy():$/;"	kind:function	line:20
+make_mix_spectra	../spectro/mixture.py	/^def make_mix_spectra(aspl, bspl):$/;"	kind:function	line:10
+measurePane	../gui/measurePane.py	/^class measurePane:$/;"	kind:class	line:34
+measurePane.py	../gui/measurePane.py	1;"	kind:file	line:1
+mix_spectra	../spectro/mixture.py	/^    def mix_spectra(x, a=1, b=1, bkg=0, C0=0, C1=1):$/;"	kind:function	line:24
+mixture	../gui/dummyInstruments.py	/^mixture = make_mix_spectra(splines['acid'], splines['base'])$/;"	kind:variable	line:9
+mixture.py	../spectro/mixture.py	1;"	kind:file	line:1
+newSample	../gui/dummyInstruments.py	/^    def newSample(self):$/;"	kind:member	line:48
+np	../dye.py	/^import numpy as np$/;"	kind:namespace	line:1
+np	../gui/dummyInstruments.py	/^import numpy as np$/;"	kind:namespace	line:1
+np	../gui/measurePane.py	/^import numpy as np$/;"	kind:namespace	line:5
+np	../gui/program.py	/^import numpy as np$/;"	kind:namespace	line:3
+np	../gui/setupPane.py	/^import numpy as np$/;"	kind:namespace	line:5
+np	../helpers.py	/^import numpy as np$/;"	kind:namespace	line:1
+np	../io.py	/^import numpy as np$/;"	kind:namespace	line:1
+np	../species.py	/^import numpy as np$/;"	kind:namespace	line:1
+np	../spectro/mixture.py	/^import numpy as np$/;"	kind:namespace	line:1
+np	../spectro/two_point.py	/^import numpy as np$/;"	kind:namespace	line:1
+pH_MCP	../spectro/two_point.py	/^def pH_MCP(R, T, S):$/;"	kind:function	line:245
+pH_from_F	../spectro/mixture.py	/^def pH_from_F(F, K):$/;"	kind:function	line:108
+pH_from_R	../spectro/two_point.py	/^def pH_from_R(R, temp, sal):$/;"	kind:function	line:126
+pH_from_mixed_spectrum	../spectro/mixture.py	/^def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, temp=25., sal=35.):$/;"	kind:function	line:111
+pd	../spectro/two_point.py	/^import pandas as pd$/;"	kind:namespace	line:2
+peak_ID	../spectro/two_point.py	/^def peak_ID(dat, acid_loc, base_loc, bkg_loc, peak_win=30, smooth_win=21):$/;"	kind:function	line:40
+pg	../gui/graph.py	/^import pyqtgraph as pg$/;"	kind:namespace	line:1
+pg	../gui/measurePane.py	/^import pyqtgraph as pg$/;"	kind:namespace	line:4
+pg	../gui/program.py	/^import pyqtgraph as pg$/;"	kind:namespace	line:7
+pg	../gui/setupPane.py	/^import pyqtgraph as pg$/;"	kind:namespace	line:4
+pg	../gui/styles.py	/^import pyqtgraph as pg$/;"	kind:namespace	line:4
+pkgrs	../splines.py	/^import pkg_resources as pkgrs$/;"	kind:namespace	line:2
+plot_mixture	../spectro/mixture.py	/^def plot_mixture(wavelength, absorption, p, aspl, bspl):$/;"	kind:function	line:122
+plot_peaks	../spectro/two_point.py	/^def plot_peaks(dat, acid, base, bkg, win=15):$/;"	kind:function	line:162
+plt	../spectro/mixture.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:6
+plt	../spectro/two_point.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:3
+program.py	../gui/program.py	1;"	kind:file	line:1
+qg	../gui/measurePane.py	/^import PyQt5.QtGui as qg$/;"	kind:namespace	line:2
+qg	../gui/setupPane.py	/^import PyQt5.QtGui as qg$/;"	kind:namespace	line:2
+qt	../gui/app.py	/^import PyQt5.QtWidgets as qt$/;"	kind:namespace	line:1
+qt	../gui/graph.py	/^import PyQt5.QtWidgets as qt$/;"	kind:namespace	line:2
+qt	../gui/measurePane.py	/^import PyQt5.QtWidgets as qt$/;"	kind:namespace	line:1
+qt	../gui/setupPane.py	/^import PyQt5.QtWidgets as qt$/;"	kind:namespace	line:1
+read	../gui/dummyInstruments.py	/^    def read(self):$/;"	kind:member	line:53
+readSpectrometer	../gui/program.py	/^    def readSpectrometer(self, line=None, plot_mode='incremental', pbar=None, pbar_0=0):$/;"	kind:member	line:61
+sample_absent	../gui/dummyInstruments.py	/^    def sample_absent(self):$/;"	kind:member	line:45
+sample_present	../gui/dummyInstruments.py	/^    def sample_present(self):$/;"	kind:member	line:42
+save_spline	../splines.py	/^def save_spline(spln, dye, form, file=None, append=True, overwrite=False):$/;"	kind:function	line:12
+set_integration_time	../gui/dummyInstruments.py	/^    def set_integration_time(self, integration_time):$/;"	kind:member	line:27
+setupGraphs	../gui/measurePane.py	/^    def setupGraphs(self, *pos):$/;"	kind:member	line:122
+setupGraphs	../gui/setupPane.py	/^    def setupGraphs(self, *pos):$/;"	kind:member	line:185
+setupPane	../gui/setupPane.py	/^class setupPane:$/;"	kind:class	line:34
+setupPane.py	../gui/setupPane.py	1;"	kind:file	line:1
+smooth	../spectro/two_point.py	/^def smooth(a, win=21):$/;"	kind:function	line:10
+specChanged	../gui/program.py	/^    def specChanged(self):$/;"	kind:member	line:123
+species.py	../species.py	1;"	kind:file	line:1
+spectrometer	../gui/setupPane.py	/^    def spectrometer(self, *pos):$/;"	kind:member	line:58
+splines	../gui/dummyInstruments.py	/^splines = load_dye_splines('MCP')$/;"	kind:variable	line:8
+splines.py	../splines.py	1;"	kind:file	line:1
+styleSheet	../gui/styles.py	/^styleSheet = """$/;"	kind:variable	line:32
+stylelist	../gui/styles.py	/^stylelist = [$/;"	kind:variable	line:23
+styles.py	../gui/styles.py	1;"	kind:file	line:1
+temp_corr_KBPB	../dye.py	/^def temp_corr_KBPB(temp):$/;"	kind:function	line:31
+temperature	../gui/setupPane.py	/^    def temperature(self, *pos):$/;"	kind:member	line:120
+title	../gui/styles.py	/^title = 'font: bold 12pt; color: rgb({}, {}, {})'.format(*colour_dark)$/;"	kind:variable	line:19
+two_point.py	../spectro/two_point.py	1;"	kind:file	line:1
+un	../dye.py	/^import uncertainties as un$/;"	kind:namespace	line:2
+un	../spectro/mixture.py	/^import uncertainties as un$/;"	kind:namespace	line:2
+un	../spectro/two_point.py	/^import uncertainties as un$/;"	kind:namespace	line:5
+unmix_spectra	../spectro/mixture.py	/^def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):$/;"	kind:function	line:55
+unp	../dye.py	/^import uncertainties.unumpy as unp$/;"	kind:namespace	line:3
+unp	../spectro/two_point.py	/^import uncertainties.unumpy as unp$/;"	kind:namespace	line:6
+update_parameter	../gui/program.py	/^    def update_parameter(self, instrument, parameter, dtype, value):$/;"	kind:member	line:135
+writeResult	../gui/program.py	/^    def writeResult(self, parameter_list):$/;"	kind:member	line:219
+writeSpectra	../gui/program.py	/^    def writeSpectra(self, parameter_list):$/;"	kind:member	line:216

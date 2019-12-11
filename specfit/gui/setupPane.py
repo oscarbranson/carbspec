@@ -82,13 +82,13 @@ class setupPane:
         optGrid.addWidget(self.statusSpectrometer, 0, 4, 1, 1)
         
         # spectrometer setup
-        integTime = qt.QLineEdit(str(self.program.params['spectro']['integrationTime']))
+        integTime = qt.QLineEdit(self.program.config.get('integrationTime'))
         integTime.setValidator(qg.QIntValidator())
         self.spectro['integrationTime'] = integTime
         optGrid.addWidget(qt.QLabel('Integration Time (ms):'), 1, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
         optGrid.addWidget(integTime, 1, 1, 1, 1)
 
-        nScans = qt.QLineEdit(str(self.program.params['spectro']['nScans']))
+        nScans = qt.QLineEdit(self.program.config.get('nScans'))
         nScans.setValidator(qg.QIntValidator())
         self.spectro['nScans'] = nScans
         optGrid.addWidget(qt.QLabel('Replicate Scans:'), 1, 2, 1, 1, alignment=QtCore.Qt.AlignRight)
@@ -121,11 +121,10 @@ class setupPane:
         self.layout.addWidget(self.spectroPane, *pos)
     
     def chooseDirectory(self):
-        saveDir = qt.QFileDialog.getExistingDirectory(self.mainWindow.measureTab, 'Choose Save Directory', self.program.saveDir, qt.QFileDialog.ShowDirsOnly)
-        print(saveDir)
+        saveDir = qt.QFileDialog.getExistingDirectory(self.mainWindow.measureTab, 'Choose Save Directory', self.program.config.get('saveDir'), qt.QFileDialog.ShowDirsOnly)
         if saveDir != '':
-            self.program.saveDir = saveDir
-        self.saveDirLabel.setText(self.program.saveDir)
+            self.program.updateConfig('saveDir', saveDir)
+        self.saveDirLabel.setText(self.program.config.get('saveDir'))
 
     def filePaths(self, *pos):
         self.pathPane = qt.QWidget()
@@ -141,7 +140,7 @@ class setupPane:
         getDirectory.clicked.connect(self.chooseDirectory)
         optGrid.addWidget(getDirectory, 0, 0, 1, 1)
 
-        self.saveDirLabel = qt.QLineEdit(self.program.saveDir)
+        self.saveDirLabel = qt.QLineEdit(self.program.config.get('saveDir'))
         optGrid.addWidget(self.saveDirLabel, 0, 1, 1, 3)
 
         self.pathLayout.addWidget(optPane)
@@ -179,13 +178,13 @@ class setupPane:
         optGrid.addWidget(self.statusTemp, 0, 4)
 
         
-        temp_c = qt.QLineEdit(str(self.program.params['temp']['temp_c']))
+        temp_c = qt.QLineEdit(self.program.config.get('temp_c'))
         temp_c.setValidator(qg.QDoubleValidator())
         self.temp['temp_c'] = temp_c
         optGrid.addWidget(qt.QLabel('Temp Offset:'), 1, 0, alignment=QtCore.Qt.AlignRight)
         optGrid.addWidget(temp_c, 1, 1)
 
-        temp_m = qt.QLineEdit(str(self.program.params['temp']['temp_m']))
+        temp_m = qt.QLineEdit(self.program.config.get('temp_m'))
         temp_m.setValidator(qg.QDoubleValidator())
         self.temp['temp_m'] = temp_m
         optGrid.addWidget(qt.QLabel('Temp Slope:'), 1, 2, alignment=QtCore.Qt.AlignRight)
@@ -239,8 +238,8 @@ class setupPane:
         self.spectro['nScans'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'nScans', int))
         
         # temp calibration changed
-        self.temp['temp_c'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_c', int))
-        self.temp['temp_m'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_m', int))
+        self.temp['temp_c'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_c', float))
+        self.temp['temp_m'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_m', float))
 
         # measure and display dark spectrum
         self.spectro['darkSpectrum'].clicked.connect(partial(self.program.collectDark, self.graphDark.lines[0], 'incremental'))

@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 
 import matplotlib.pyplot as plt
 
-from carbspec.dye import calc_KBPB
+from carbspec.dye import calc_KBPB, calc_KMCP
 
 def make_mix_spectra(aspl, bspl):
     """
@@ -97,28 +97,35 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):
     base_loc = x[bspl(x) == max(bspl(x))]
     acid_loc = x[aspl(x) == max(aspl(x))]
     
-    bstart = float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc))
-    astart = float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc))
+    bstart = max([float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc)), 0])
+    astart = max([float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc)), 0])
+    # bstart = float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc))
+    # astart = float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc))
     
     # should really re-write this to allow parameter damping and prefer zeros
     return curve_fit(mixture, x, y, p0=(astart, bstart, 0, 0, 1),
-                     sigma=w,
-                     bounds=((0, 0, -0.1, -0.05, 0.95), 
-                             (np.inf, np.inf, 0.1, 0.05, 1.05)))
+                    sigma=w,
+                    bounds=((0, 0, -0.1, -0.05, 0.95), 
+                            (np.inf, np.inf, 0.1, 0.05, 1.05)))
 
 def pH_from_F(F, K):
     return -log10(K / F)
 
-def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, temp=25., sal=35.):
+def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, dye='BPB', temp=25., sal=35.):
     
     p, cov = unmix_spectra(wavelength, spectrum, aspl, bspl)
     pe = un.correlated_values(p, cov)
     
     F = pe[1] / pe[0]
     
-    KBPB = calc_KBPB(sal, temp)
+    if dye == 'BPB':
+        dyeK = calc_KBPB(sal, temp)
+    elif dye == 'MCP':
+        dyeK = calc_KMCP(temp, sal, 'dickson')
+    else:
+        raise ValueError(f'dye={dye} is not valid. Please enter BPB or MCP.')
     
-    return pH_from_F(F, KBPB)
+    return pH_from_F(F, dyeK)
 
 def plot_mixture(wavelength, absorption, p, aspl, bspl):
     x = wavelength
@@ -159,4 +166,4 @@ def plot_mixture(wavelength, absorption, p, aspl, bspl):
 
     fig.tight_layout(h_pad=0.1)
 
-    return fig, ax
+    return fig, (ax, rax)

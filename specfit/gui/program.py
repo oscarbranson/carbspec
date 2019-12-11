@@ -44,50 +44,51 @@ class Program:
                       'pH': [''] * 5,
                       'Temp': [''] * 5}
 
-        # Dict of program paramters - load from file in future?
-        self.params = {}
+        # # Dict of program paramters - load from file in future?
+        # self.params = {}
         
-        # Temperature Probe Parameters
-        self.params['temp'] = {
-            'temp_m': 1,
-            'temp_c': 0,
-            'commLink': None
-            }
-        # Spectrometer Parameters
-        self.params['spectro'] = {
-            'commLink': None,
-            'integrationTime': 10,
-            'nScans': 50
-        }
+        # # Temperature Probe Parameters
+        # self.params['temp'] = {
+        #     'temp_m': 1,
+        #     'temp_c': 0,
+        #     'commLink': None
+        #     }
+        # # Spectrometer Parameters
+        # self.params['spectro'] = {
+        #     'commLink': None,
+        #     'integrationTime': 10,
+        #     'nScans': 50
+        # }
 
         self._rsrcpath = pkgrs.resource_filename('carbspec', '/gui/resources/')
         self._cfgfile = self._rsrcpath + 'carbspec.cfg'
 
-        self.loadConfig()
+        self._config = ConfigParser()
+        self._config.read(self._cfgfile)
+        self.config = self._config['LAST']
+
         self.connectSpectrometer()
 
-        self.modeSet(self.mode)
+        self.modeSet(self.config.get('mode'))
 
-    def loadConfig(self):
-        self.config = ConfigParser()
-        self.config.read(self._cfgfile)
+    # def loadConfig(self):
+        
+        # self.params['spectro']['integrationTime'] = self.config['Last'].get('integrationTime')
+        # self.params['spectro']['nScans'] = self.config['Last'].get('nScans')
 
-        self.params['spectro']['integrationTime'] = self.config['Last'].get('integrationTime')
-        self.params['spectro']['nScans'] = self.config['Last'].get('nScans')
+        # self.params['temp']['temp_m'] = self.config['Last'].get('temp_m')
+        # self.params['temp']['temp_c'] = self.config['Last'].get('temp_c')
 
-        self.params['temp']['temp_m'] = self.config['Last'].get('temp_m')
-        self.params['temp']['temp_c'] = self.config['Last'].get('temp_c')
-
-        self.saveDir = self.config['Last'].get('saveDir')
-        self.mode = self.config['Last'].get('mode')
+        # self.saveDir = self.config['Last'].get('saveDir')
+        # self.mode = self.config['Last'].get('mode')
 
     def writeConfig(self):
         with open(self._cfgfile, 'w') as f:
-            self.config.write(f)
+            self._config.write(f)
 
     def updateConfig(self, parameter, value):
-        if parameter in self.config['DEFAULT']:
-            self.config.set('Last', parameter, str(value))
+        if parameter in self._config['DEFAULT']:
+            self._config.set('LAST', parameter, str(value))
         
         self.writeConfig()
 
@@ -101,7 +102,7 @@ class Program:
     def readSpectrometer(self, line=None, plot_mode='incremental', pbar=None, pbar_0=0):
         self.incremental['wv'] = self.data['wv']
 
-        for i in range(self.params['spectro']['nScans']):
+        for i in range(self.config.getint('nScans')):
             meas = self.spectrometer.read()
 
             if i == 0:
@@ -129,7 +130,7 @@ class Program:
         self.specChanged()
         self.spectrometer.light_off()
         # set pbar bar max
-        self.mainWindow.setupPane.spectro['darkProgress'].setMaximum(self.params['spectro']['nScans'])
+        self.mainWindow.setupPane.spectro['darkProgress'].setMaximum(self.config.getint('nScans'))
         # measure
         self.readSpectrometer(line=line, plot_mode=plot_mode, pbar=self.mainWindow.setupPane.spectro['darkProgress'])
         self.mainWindow.setupPane.spectro['scaleFactor'].setDisabled(False)
@@ -147,7 +148,7 @@ class Program:
         self.clearGraph(self.mainWindow.setupPane.graphScale)
 
         pbar = self.mainWindow.setupPane.spectro['scaleProgress']
-        pbar.setMaximum(2 * self.params['spectro']['nScans'])
+        pbar.setMaximum(2 * self.config.getint('nScans'))
 
         self.spectrometer.channel_0()
         self.readSpectrometer(line=lines[0], plot_mode=plot_mode, pbar=pbar, pbar_0=0)
@@ -155,7 +156,7 @@ class Program:
 
         self.spectrometer.channel_1()
         lines[1].setData(x=self.data['wv'])
-        self.readSpectrometer(line=lines[1], plot_mode=plot_mode, pbar=pbar, pbar_0=self.params['spectro']['nScans'])
+        self.readSpectrometer(line=lines[1], plot_mode=plot_mode, pbar=pbar, pbar_0=self.config.getint('nScans'))
         self.data['channel1'] = self.incremental['signal']
 
         self.data['scaleFactor'] = self.data['channel1'] / self.data['channel0']
@@ -182,21 +183,21 @@ class Program:
         self.mainWindow.measurePane.collectSpectrum.setDisabled(True)
 
     def update_parameter(self, instrument, parameter, dtype, value):
-        if value == '':
+        if value == '' or value == '.':
             val = None
         else:
             val = dtype(value) 
-        self.params[instrument][parameter] = val
+        if val is not None:
+            self.updateConfig(parameter, val)
 
         # if any spectro parameter is changed, update the dark
-        if parameter in self.params['spectro'].keys():
+        if parameter in ['integrationTime', 'nScans']:
             self.specChanged()
         
         if parameter == 'integrationTime' and val is not None:
             self.spectrometer.set_integration_time(val)
         
-        if val is not None:
-            self.updateConfig(parameter, val)
+        
 
     def collectSpectrum(self, lines, plot_mode):
         self.mainWindow.measurePane.collectSpectrum.setDisabled(True)
@@ -209,7 +210,7 @@ class Program:
         self.clearGraph(self.mainWindow.measurePane.graphResid)
         
         pbar = self.mainWindow.measurePane.collectionPBar
-        pbar.setMaximum(2 * self.params['spectro']['nScans'])
+        pbar.setMaximum(2 * self.config.getint('nScans'))
         
         self.spectrometer.channel_0()
         self.readSpectrometer(line=lines[0], plot_mode=plot_mode,
@@ -220,7 +221,7 @@ class Program:
         t0 = self.readTemp()
         self.spectrometer.channel_1()
         self.readSpectrometer(line=lines[1], plot_mode=plot_mode,
-                              pbar=pbar, pbar_0=self.params['spectro']['nScans'])
+                              pbar=pbar, pbar_0=self.config.getint('nScans'))
         self.data['channel1'] = self.incremental['signal']
         t1 = self.readTemp()
         
