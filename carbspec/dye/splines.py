@@ -1,4 +1,5 @@
 import json
+import numpy as np
 import pkg_resources as pkgrs
 from scipy.interpolate import UnivariateSpline
 
@@ -58,14 +59,16 @@ def save_spline(spln, dye, form, file=None, append=True, overwrite=False):
     with open(file, 'w') as f:
         json.dump(splns, f, sort_keys=True, indent=4)
 
-def load_dye_splines(dye='BPB', file=None):
+def tck_2_array(tck):
+    return tuple([np.asanyarray(a) for a in tck[:-1]] + [tck[-1]])
+
+def load_splines(dye='BPB', file=None):
     """
     Load saved splines for 
     """
-
     splines = load_spline_tcks(file)[dye]
 
-    return {k: UnivariateSpline._from_tck(v) for k, v in splines.items()}
+    return {k: UnivariateSpline._from_tck(tck_2_array(tck)) for k, tck in splines.items()}
 
 def list_available(file=None):
     """

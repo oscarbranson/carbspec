@@ -88,3 +88,6 @@ def calc_KMCP(temp, sal=35, mode='tris'):
         return 10**-pK
     else:
         raise ValueError('Please specify `mode` as `tris` or `dickson`')
+
+Ks = {'MCP': calc_KMCP,
+      'BPB': calc_KBPB}

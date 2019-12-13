@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import uncertainties as un
 import uncertainties.unumpy as unp
 
-from carbspec.dye import calc_pKBPB
+from carbspec.dye.Ks import calc_pKBPB
 
 def smooth(a, win=21):
     """

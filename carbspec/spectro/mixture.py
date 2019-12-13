@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 
 import matplotlib.pyplot as plt
 
-from carbspec.dye import calc_KBPB, calc_KMCP
+from carbspec.dye.Ks import calc_KBPB, calc_KMCP
 
 def make_mix_spectra(aspl, bspl):
     """
