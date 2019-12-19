@@ -80,3 +80,25 @@ def calc_KS(TempC, Sal):
                   param[8] * np.log(T)) +
                   param[9] / T * Istr * np.sqrt(Istr) +
                   param[10] / T * Istr**2 + np.log(1 - 0.001005 * Sal))
+
+# B
+def calc_TB(Sal):
+    """
+    Calculate total Boron
+    
+    Directly from CO2SYS:
+    Uppstrom, L., Deep-Sea Research 21:161-162, 1974:
+    this is 0.000416 * Sal/35. = 0.0000119 * Sal
+    TB(FF) = (0.000232 / 10.811) * (Sal / 1.80655) in mol/kg-SW
+    """
+    a, b = (0.0004157, 35.)
+    return a * Sal / b
+    
+# def calc_KB(TempC, Sal):
+#     param = 
+
+# KBcond = np.exp((-8966.90 - 2890.53 * sqrtSal - 77.942 * Sal +
+#                      1.728 * Sal * sqrtSal - 0.0996 * Sal * Sal) /
+#                     T + (148.0248 + 137.1942 * sqrtSal + 1.62142 * Sal) +
+#                     (-24.4344 - 25.085 * sqrtSal - 0.2474 * Sal) *
+#                     lnT + 0.053105 * sqrtSal * T)  # Dickson90b
