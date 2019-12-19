@@ -26,7 +26,7 @@ def calc_KF(TempC, Sal):
 
     Returns
     -------
-    array_like : KF
+    array_like : KF on Total scale
     """
     TempK = TempC + 273.15
 

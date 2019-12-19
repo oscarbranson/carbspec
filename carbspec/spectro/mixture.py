@@ -2,6 +2,7 @@ import numpy as np
 import uncertainties as un
 from uncertainties.unumpy import log10, nominal_values
 from scipy.optimize import curve_fit
+from .fitting import fit_spectrum
 
 import matplotlib.pyplot as plt
 
@@ -52,7 +53,7 @@ def make_mix_spectra(aspl, bspl):
 
     return mix_spectra
 
-def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):
+def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
     """
     Determine the relative contribution of acid and base absorption to a measured spectrum.
     
@@ -83,15 +84,10 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):
     x = wavelength
     y = absorption
 
-    mixture = make_mix_spectra(aspl, bspl)
+    # mixture = make_mix_spectra(aspl, bspl)
     
-    if isinstance(weights, bool):
-        if weights:
-            w = 1 / (mixture(x)**2 + 1)
-        else:
-            w = None
-    else:
-        w = weights
+    if sigma is None:
+        sigma = np.array(1)
     
     # identify starting values for optimisation
     base_loc = x[bspl(x) == max(bspl(x))]
@@ -99,21 +95,16 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, weights=False):
     
     bstart = max([float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc)), 0])
     astart = max([float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc)), 0])
-    # bstart = float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc))
-    # astart = float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc))
     
     # should really re-write this to allow parameter damping and prefer zeros
-    return curve_fit(mixture, x, y, p0=(astart, bstart, 0, 0, 1),
-                    sigma=w,
-                    bounds=((0, 0, -0.1, -0.05, 0.95), 
-                            (np.inf, np.inf, 0.1, 0.05, 1.05)))
+    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, 1, 0, 0])
 
 def pH_from_F(F, K):
     return -log10(K / F)
 
-def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, dye='BPB', temp=25., sal=35.):
+def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, dye='BPB', sigma=None, temp=25., sal=35.):
     
-    p, cov = unmix_spectra(wavelength, spectrum, aspl, bspl)
+    p, cov = unmix_spectra(wavelength, spectrum, aspl, bspl, sigma)
     pe = un.correlated_values(p, cov)
     
     F = pe[1] / pe[0]
@@ -167,3 +158,12 @@ def plot_mixture(wavelength, absorption, p, aspl, bspl):
     fig.tight_layout(h_pad=0.1)
 
     return fig, (ax, rax)
+
+def spec_from_H(wv, H, dyeConc, dyeK, aspl, bspl):
+    a = dyeConc / (1 + dyeK / H)
+    b = dyeConc / (1 + H / dyeK)
+    
+    return aspl(wv) * a + bspl(wv) * b
+
+def spec_from_pH(wv, pH, dyeConc, dyeK, aspl, bspl):
+    return spec_from_H(wv, 10**-pH, dyeConc, dyeK, aspl, bspl)
