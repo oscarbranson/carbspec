@@ -97,7 +97,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
     astart = max([float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc)), 0])
     
     # should really re-write this to allow parameter damping and prefer zeros
-    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, 1, 0, 0])
+    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, 0, 0, 1])
 
 def pH_from_F(F, K):
     return -log10(K / F)
@@ -118,10 +118,12 @@ def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, dye='BPB', sigma=No
     
     return pH_from_F(F, dyeK)
 
-def plot_mixture(wavelength, absorption, p, aspl, bspl):
+def plot_mixture(wavelength, absorption, aspl, bspl, p=None):
     x = wavelength
     y = absorption
-    
+
+    if p is None:
+        p, _ = unmix_spectra(x, y, aspl, bspl)
     
     fig = plt.figure(figsize=[6, 5])
 

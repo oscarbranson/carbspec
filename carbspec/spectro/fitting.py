@@ -22,7 +22,7 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
     =======
     Jacobian of fitting function as a matrix of shape (n,m) : array-like
     """
-    a, b, m, c, B0 = x
+    a, b, B0, c, m = x
     
     J = np.ones((len(wv), 5))
     
@@ -47,7 +47,7 @@ def specmix(x, wv, aspl, bspl, **kwargs):
         Spline objects that produce the acid (aspl) or base (aspl)
         molal absorption given a wavelength.
     """
-    a, b, m, c, B0 = x
+    a, b, B0, c, m = x
     return a * aspl(m * wv + c) + b * bspl(m * wv + c) + B0
 
 def obj_fn(x, wv, Abs, sigma, aspl, bspl, **kwargs):
@@ -67,7 +67,7 @@ def jac_2_cov(fit):
     # covariance matrix is inverse of hessian (H = J.dot(J.T)) scaled to MSE.
     return np.linalg.inv(fit.jac.T.dot(fit.jac)) * s_sq 
 
-def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 1, 0, 0]):
+def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0, 1]):
     """
     Fit a spectrum with a combination of end-member spectra.
 
@@ -87,7 +87,8 @@ def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 1, 0,
     =======
     p, cov  : the optimal values for (a, b, m, c, B0) and their covariance matrix
     """
+
     fit = least_squares(obj_fn, pstart, Jacobian, 
                         kwargs=dict(wv=wv, Abs=Abs, sigma=sigma, aspl=aspl, bspl=bspl, daspl=aspl.derivative(), dbspl=bspl.derivative()), 
-                        bounds=((0, 0, 0.95, -20, -0.2), (np.inf, np.inf, 1.05, 20, 0.2)), method='trf')
+                        bounds=((0, 0, -20, -0.2, 0.95), (np.inf, np.inf, 20, 0.2, 1.05)), method='trf')
     return fit.x, jac_2_cov(fit)
