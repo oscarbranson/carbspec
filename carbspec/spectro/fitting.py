@@ -22,8 +22,8 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
     =======
     Jacobian of fitting function as a matrix of shape (n,m) : array-like
     """
-    a, b, B0, c, mc = x
-    m = 1 + mc / 1000
+    a, b, B0, c, m = x
+    # m = 1 + mc / 1000
 
     J = np.ones((len(wv), 5))
     
@@ -48,8 +48,7 @@ def specmix(x, wv, aspl, bspl, **kwargs):
         Spline objects that produce the acid (aspl) or base (aspl)
         molal absorption given a wavelength.
     """
-    a, b, B0, c, mc = x
-    m = 1 + mc / 1000
+    a, b, B0, c, m = x
     return a * aspl(m * wv + c) + b * bspl(m * wv + c) + B0
 
 def obj_fn(x, wv, Abs, sigma, aspl, bspl, **kwargs):
@@ -70,7 +69,7 @@ def jac_2_cov(fit):
     return np.linalg.inv(fit.jac.T.dot(fit.jac)) * s_sq 
 
 def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0, 0],
-                 bounds=((0, 0, -0.1, -20, -5), (np.inf, np.inf, 0.1, 20, 5))):
+                 bounds=((0, 0, -0.1, -20, 0.98), (np.inf, np.inf, 0.1, 20, 1.02))):
     """
     Fit a spectrum with a combination of end-member spectra.
 
@@ -98,5 +97,5 @@ def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0,
     
     fit = least_squares(obj_fn, pstart, Jacobian, 
                         kwargs=dict(wv=wv, Abs=Abs, sigma=sigma, aspl=aspl, bspl=bspl, daspl=aspl.derivative(), dbspl=bspl.derivative()), 
-                        bounds=bounds, method='trf')
+                        bounds=bounds, method='trf', x_scale='jac', loss='soft_l1', tr_solver='exact')
     return fit.x, jac_2_cov(fit)

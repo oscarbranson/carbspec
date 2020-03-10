@@ -22,12 +22,12 @@ def make_mix_spectra(aspl, bspl):
     -------
     function : a mix_spectra function accepting the arguments (a, b, bkg, c, mc)
     """
-    def mix_spectra(x, a=1, b=1, bkg=0, c=0, mc=0):
+    def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=0):
         """
         Predict a spectrum as a mixture of end-member molal absorption factors.
 
         Equation: Abs = bkg + a * acid(xm) + b * base(xm)
-        where xm = c + x * (1 + mc / 1000)
+        where xm = c + x * m
 
         Parameters
         ----------
@@ -42,14 +42,12 @@ def make_mix_spectra(aspl, bspl):
         c : float
             0th order wavelength adjustment.
         mc : float
-            1st order wavelength adjustment, expressed as difference from 1 for fit stability
-            from 1, i.e. m = 1 + mc / 1000
+            1st order wavelength adjustment.
 
         Returns
         -------
         array_like : predicted absorption spectrum.
         """
-        m = 1 + mc / 1000
         xn = c + x * m
         return bkg + a * aspl(xn) + b * bspl(xn)
 
@@ -100,7 +98,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
     astart = max(y[acid_loc] - B0start - bstart * bspl(x[acid_loc]), 0) / aspl(x[acid_loc])  # acid coefficient
 
     # re-write this to allow parameter damping and prefer zeros?
-    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, B0start, 0, 0])
+    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, B0start, 0, 1])
 
 def pH_from_F(F, K):
     return -log10(K / F)
@@ -144,7 +142,7 @@ def plot_mixture(wavelength, absorption, aspl, bspl, p=None, sigma=None):
     ax.plot(x, mix_spectra(x, *p), label='Model')
 
     ax.axhline(p[2], c='k', ls='dashed', label='Baseline', lw=1)
-    xn = p[-2] + x * (1 + p[-1] / 1000)
+    xn = p[-2] + x * p[-1]
     ax.plot(x, p[2] + aspl(xn) * p[0], c='b', ls='dashed', label='Acid', lw=1)
     ax.plot(x, p[2] + bspl(xn) * p[1], c='r', ls='dashed', label='Base', lw=1)
 
@@ -152,8 +150,12 @@ def plot_mixture(wavelength, absorption, aspl, bspl, p=None, sigma=None):
 
     ax.legend(scatterpoints=3)
 
-    rax.scatter(x, y - mix_spectra(x, *p), s=0.5, c='k')
+    r = y - mix_spectra(x, *p)
+    RSS = (r**2).sum()
+    R2 = 1 - (RSS / ((y - y.mean())**2).sum())
+    rax.scatter(x, r, s=0.5, c='k')
     rax.axhline(0, ls='dashed', c=(0,0,0,0.6))
+    rax.text(.01, .05, f"RSS: {RSS:.2e}  |  $R^2$: {R2:.6f}", transform=rax.transAxes, ha='left', va='bottom')
 
     ax.set_ylabel('Absorption')
 
