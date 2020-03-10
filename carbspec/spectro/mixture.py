@@ -20,9 +20,9 @@ def make_mix_spectra(aspl, bspl):
 
     Returns
     -------
-    function : a mix_spectra function accepting the arguments (a, b, bkg, C0, C1)
+    function : a mix_spectra function accepting the arguments (a, b, bkg, c, m)
     """
-    def mix_spectra(x, a=1, b=1, bkg=0, C0=0, C1=1):
+    def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=1):
         """
         Predict a spectrum as a mixture of end-member molal absorption factors.
 
@@ -39,16 +39,16 @@ def make_mix_spectra(aspl, bspl):
             base coefficient
         bkg : float
             A constant background offset.
-        C0 : float
+        c : float
             0th order wavelength adjustment.
-        C1 : float
+        m : float
             1st order wavelength adjustment.
 
         Returns
         -------
         array_like : predicted absorption spectrum.
         """
-        xn = C0 + x * C1
+        xn = c + x * m
         return bkg + a * aspl(xn) + b * bspl(xn)
 
     return mix_spectra
@@ -64,7 +64,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
     wavelength : array_like
         The wavelength of the spectrum
     absorption : array_like
-        The absorption of the spectru
+        The absorption of the spectrum
     aspl : scipy.interpolate.UnivariateSpline
         A spline describing the molal absorption spectrum of the acid
         form of the indicator dye across the entire spectral range.
@@ -79,7 +79,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
 
     Returns
     -------
-    tuple : Containing the (a, b, bkg, C0, C1) terms of the mix_spectra function.
+    tuple : Containing the (a, b, bkg, c, m) terms of the mix_spectra function.
     """
     x = wavelength
     y = absorption
@@ -90,14 +90,21 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
         sigma = np.array(1)
     
     # identify starting values for optimisation
-    base_loc = x[bspl(x) == max(bspl(x))]
-    acid_loc = x[aspl(x) == max(aspl(x))]
+    B0start = y[-1]
+    base_loc = np.argmax(bspl(x))
+    bstart = max(y[base_loc] - B0start, 0) / bspl(x[base_loc])
     
-    bstart = max([float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc)), 0])
-    astart = max([float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc)), 0])
+    acid_loc = np.argmax(aspl(x))
+    astart = max(y[acid_loc] - B0start - bstart * bspl(x[acid_loc]), 0) / aspl(x[acid_loc])
+
+    
+    # B0start = y[-1]
+    # bstart = max([float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc)), 0]) - B0start
+    # astart = max([float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc)), 0]) - B0start
+    # astart = 0
     
     # should really re-write this to allow parameter damping and prefer zeros
-    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, 0, 0, 1])
+    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, B0start, 0, 1])
 
 def pH_from_F(F, K):
     return -log10(K / F)

@@ -80,15 +80,15 @@ def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0,
     aspl, bspl : UnivariateSpline
         Spline objects that produce the acid (aspl) or base (aspl)
         molal absorption given a wavelength.
-    sigma : arra-like
+    sigma : array-like
         The standard deviation of the data.
 
     Returns
     =======
-    p, cov  : the optimal values for (a, b, m, c, B0) and their covariance matrix
+    p, cov  : the optimal values for (a, b, B0, c, m) and their covariance matrix
     """
-
+    
     fit = least_squares(obj_fn, pstart, Jacobian, 
                         kwargs=dict(wv=wv, Abs=Abs, sigma=sigma, aspl=aspl, bspl=bspl, daspl=aspl.derivative(), dbspl=bspl.derivative()), 
-                        bounds=((0, 0, -20, -0.2, 0.95), (np.inf, np.inf, 20, 0.2, 1.05)), method='trf')
+                        bounds=((0, 0, -0.1, -20, 0.95), (np.inf, np.inf, 0.1, 20, 1.05)), method='trf')
     return fit.x, jac_2_cov(fit)
