@@ -20,14 +20,14 @@ def make_mix_spectra(aspl, bspl):
 
     Returns
     -------
-    function : a mix_spectra function accepting the arguments (a, b, bkg, c, m)
+    function : a mix_spectra function accepting the arguments (a, b, bkg, c, mc)
     """
-    def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=1):
+    def mix_spectra(x, a=1, b=1, bkg=0, c=0, mc=0):
         """
         Predict a spectrum as a mixture of end-member molal absorption factors.
 
         Equation: Abs = bkg + a * acid(xm) + b * base(xm)
-        where xm = C0 + x * C1
+        where xm = c + x * (1 + mc / 1000)
 
         Parameters
         ----------
@@ -41,13 +41,15 @@ def make_mix_spectra(aspl, bspl):
             A constant background offset.
         c : float
             0th order wavelength adjustment.
-        m : float
-            1st order wavelength adjustment.
+        mc : float
+            1st order wavelength adjustment, expressed as difference from 1 for fit stability
+            from 1, i.e. m = 1 + mc / 1000
 
         Returns
         -------
         array_like : predicted absorption spectrum.
         """
+        m = 1 + mc / 1000
         xn = c + x * m
         return bkg + a * aspl(xn) + b * bspl(xn)
 
@@ -79,7 +81,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
 
     Returns
     -------
-    tuple : Containing the (a, b, bkg, c, m) terms of the mix_spectra function.
+    tuple : Containing the (a, b, bkg, c, mc) terms of the mix_spectra function.
     """
     x = wavelength
     y = absorption
@@ -89,22 +91,16 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
     if sigma is None:
         sigma = np.array(1)
     
-    # identify starting values for optimisation
-    B0start = y[-1]
-    base_loc = np.argmax(bspl(x))
-    bstart = max(y[base_loc] - B0start, 0) / bspl(x[base_loc])
+    # starting values for optimisation
+    B0start = y[-1]  # background
+    base_loc = np.argmax(bspl(x))  # wavelength of maximum base absorption
+    bstart = max(y[base_loc] - B0start, 0) / bspl(x[base_loc])  # acid coefficient
     
-    acid_loc = np.argmax(aspl(x))
-    astart = max(y[acid_loc] - B0start - bstart * bspl(x[acid_loc]), 0) / aspl(x[acid_loc])
+    acid_loc = np.argmax(aspl(x))  # wavelength of maximum acid absorption
+    astart = max(y[acid_loc] - B0start - bstart * bspl(x[acid_loc]), 0) / aspl(x[acid_loc])  # acid coefficient
 
-    
-    # B0start = y[-1]
-    # bstart = max([float(y[abs(x - base_loc) == min(abs(x - base_loc))] / bspl(base_loc)), 0]) - B0start
-    # astart = max([float(y[abs(x - acid_loc) == min(abs(x - acid_loc))] / aspl(acid_loc)), 0]) - B0start
-    # astart = 0
-    
-    # should really re-write this to allow parameter damping and prefer zeros
-    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, B0start, 0, 1])
+    # re-write this to allow parameter damping and prefer zeros?
+    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, B0start, 0, 0])
 
 def pH_from_F(F, K):
     return -log10(K / F)
@@ -125,12 +121,12 @@ def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, dye='BPB', sigma=No
     
     return pH_from_F(F, dyeK)
 
-def plot_mixture(wavelength, absorption, aspl, bspl, p=None):
+def plot_mixture(wavelength, absorption, aspl, bspl, p=None, sigma=None):
     x = wavelength
     y = absorption
 
     if p is None:
-        p, _ = unmix_spectra(x, y, aspl, bspl)
+        p, _ = unmix_spectra(x, y, aspl, bspl, sigma=sigma)
     
     fig = plt.figure(figsize=[6, 5])
 
@@ -148,7 +144,7 @@ def plot_mixture(wavelength, absorption, aspl, bspl, p=None):
     ax.plot(x, mix_spectra(x, *p), label='Model')
 
     ax.axhline(p[2], c='k', ls='dashed', label='Baseline', lw=1)
-    xn = p[-2] + x * p[-1]
+    xn = p[-2] + x * (1 + p[-1] / 1000)
     ax.plot(x, p[2] + aspl(xn) * p[0], c='b', ls='dashed', label='Acid', lw=1)
     ax.plot(x, p[2] + bspl(xn) * p[1], c='r', ls='dashed', label='Base', lw=1)
 

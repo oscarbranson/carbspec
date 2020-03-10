@@ -8,7 +8,7 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
     Parameters
     ==========
     x : tuple
-        A tuple containing the model parameters as (a, b, m, c, B0)
+        A tuple containing the model parameters as (a, b, B0, c, mc)
     wv : array-like
         The wavelength of the data
     aspl, bspl : UnivariateSpline
@@ -22,8 +22,9 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
     =======
     Jacobian of fitting function as a matrix of shape (n,m) : array-like
     """
-    a, b, B0, c, m = x
-    
+    a, b, B0, c, mc = x
+    m = 1 + mc / 1000
+
     J = np.ones((len(wv), 5))
     
     J[:,0] = aspl(wv * m + c)
@@ -35,19 +36,20 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
 
 def specmix(x, wv, aspl, bspl, **kwargs):
     """
-    Return the mixture of aspl and bspl sepcified by the parameters in x.
+    Return the mixture of aspl and bspl specified by the parameters in x.
 
     Parameters
     ==========
     x : tuple
-        A tuple containing the model parameters as (a, b, m, c, B0)
+        A tuple containing the model parameters as (a, b, B0, c, m)
     wv : array-like
         The wavelength of the data
     aspl, bspl : UnivariateSpline
         Spline objects that produce the acid (aspl) or base (aspl)
         molal absorption given a wavelength.
     """
-    a, b, B0, c, m = x
+    a, b, B0, c, mc = x
+    m = 1 + mc / 1000
     return a * aspl(m * wv + c) + b * bspl(m * wv + c) + B0
 
 def obj_fn(x, wv, Abs, sigma, aspl, bspl, **kwargs):
@@ -67,7 +69,8 @@ def jac_2_cov(fit):
     # covariance matrix is inverse of hessian (H = J.dot(J.T)) scaled to MSE.
     return np.linalg.inv(fit.jac.T.dot(fit.jac)) * s_sq 
 
-def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0, 1]):
+def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0, 0],
+                 bounds=((0, 0, -0.1, -20, -5), (np.inf, np.inf, 0.1, 20, 5))):
     """
     Fit a spectrum with a combination of end-member spectra.
 
@@ -82,6 +85,11 @@ def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0,
         molal absorption given a wavelength.
     sigma : array-like
         The standard deviation of the data.
+    pstart : array-like
+        Start values for parameters (a,b, B0, c, mc) used in fitting.
+        Note m = 1 + mc / 1000, i.e. mc is the percent different from 1.
+    bounds : two-tuple
+        Bounds for parameters (a,b, B0, c, mc) used in fitting.
 
     Returns
     =======
@@ -90,5 +98,5 @@ def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0,
     
     fit = least_squares(obj_fn, pstart, Jacobian, 
                         kwargs=dict(wv=wv, Abs=Abs, sigma=sigma, aspl=aspl, bspl=bspl, daspl=aspl.derivative(), dbspl=bspl.derivative()), 
-                        bounds=((0, 0, -0.1, -20, 0.95), (np.inf, np.inf, 0.1, 20, 1.05)), method='trf')
+                        bounds=bounds, method='trf')
     return fit.x, jac_2_cov(fit)
