@@ -22,7 +22,7 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
     =======
     Jacobian of fitting function as a matrix of shape (n,m) : array-like
     """
-    a, b, B0, c, m = x
+    a, b, _, c, m = x
     # m = 1 + mc / 1000
 
     J = np.ones((len(wv), 5))
