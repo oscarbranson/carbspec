@@ -3,6 +3,24 @@ import numpy as np
 import pkg_resources as pkgrs
 from scipy.interpolate import UnivariateSpline
 
+def dye_spline_handler(dye):
+    """
+    Returns splines for specified dye.
+
+    Parameters
+    ----------
+    dye : str or dict
+        Either the name of the dye in question, or a dict of dye splines.
+    
+    Returns
+    -------
+    splines for the acid and base end-members : aspl, bspl
+    """
+    if isinstance(dye, str):
+        dye = load_splines(dye)
+
+    return dye['acid'], dye['base']
+
 def load_spline_tcks(file=None):
     if file is None:
         file = pkgrs.resource_filename('carbspec','resources/splines.json')
