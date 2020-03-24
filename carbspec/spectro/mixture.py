@@ -3,25 +3,31 @@ import uncertainties as un
 from uncertainties.unumpy import log10, nominal_values
 from scipy.optimize import curve_fit
 from .fitting import fit_spectrum
-
 import matplotlib.pyplot as plt
 
-from carbspec.dye.Ks import calc_KBPB, calc_KMCP
+from carbspec.dye.Ks import dye_K_handler
+from carbspec.dye.splines import dye_spline_handler
 
-def make_mix_spectra(aspl, bspl):
+def make_mix_spectra(dye):
     """
     Returns a mix_spectra function incorporating the acid and base splines.
 
     Parameters
     ----------
-    aspl, bspl : scipy.interpolate.UnivariateSpline
-        Spline objects for the acid and base molal absorption factors across
+    dye : str or dict
+        Either the name of the dye you're using, or a dict containing 
+        'acid' and 'base' entries with corresponding 
+        scipy.interpolate.UnivariateSpline objects describing the molal 
+        absorption spectrum of the acid form of the indicator dye across 
         the entire spectral range.
 
     Returns
     -------
     function : a mix_spectra function accepting the arguments (a, b, bkg, c, mc)
     """
+    
+    aspl, bspl = dye_spline_handler(dye)
+
     def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=1):
         """
         Predict a spectrum as a mixture of end-member molal absorption factors.
@@ -53,7 +59,7 @@ def make_mix_spectra(aspl, bspl):
 
     return mix_spectra
 
-def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
+def unmix_spectra(wavelength, absorption, dye, sigma=None):
     """
     Determine the relative contribution of acid and base absorption to a measured spectrum.
     
@@ -65,12 +71,12 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
         The wavelength of the spectrum
     absorption : array_like
         The absorption of the spectrum
-    aspl : scipy.interpolate.UnivariateSpline
-        A spline describing the molal absorption spectrum of the acid
-        form of the indicator dye across the entire spectral range.
-    bspl : scipy.interpolate.UnivariateSpline
-        A spline describing the molal absorption spectrum of the base
-        form of the indicator dye across the entire spectral range.
+    dye : str or dict
+        Either the name of the dye you're using, or a dict containing 
+        'acid' and 'base' entries with corresponding 
+        scipy.interpolate.UnivariateSpline objects describing the molal 
+        absorption spectrum of the acid form of the indicator dye across 
+        the entire spectral range.
     weights : bool or array-like
         If True, fit is weighted by the 1/(S**2 + 1), where S is a spectrum at
         pKdye.
@@ -84,7 +90,7 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
     x = wavelength
     y = absorption
 
-    # mixture = make_mix_spectra(aspl, bspl)
+    aspl, bspl = dye_spline_handler(dye)
     
     if sigma is None:
         sigma = np.array(1)
@@ -103,28 +109,23 @@ def unmix_spectra(wavelength, absorption, aspl, bspl, sigma=None):
 def pH_from_F(F, K):
     return -log10(K / F)
 
-def pH_from_mixed_spectrum(wavelength, spectrum, aspl, bspl, dye='BPB', sigma=None, temp=25., sal=35.):
-    
-    p, cov = unmix_spectra(wavelength, spectrum, aspl, bspl, sigma)
+def pH_from_spectrum(wavelength, spectrum, dye='BPB', sigma=None, temp=25., sal=35., **kwargs):
+
+    p, cov = unmix_spectra(wavelength, spectrum, dye, sigma)
     pe = un.correlated_values(p, cov)
     
     F = pe[1] / pe[0]
     
-    if dye == 'BPB':
-        dyeK = calc_KBPB(sal, temp)
-    elif dye == 'MCP':
-        dyeK = calc_KMCP(temp, sal, 'dickson')
-    else:
-        raise ValueError(f'dye={dye} is not valid. Please enter BPB or MCP.')
+    dyeK = dye_K_handler(dye, temp=temp, sal=sal, **kwargs)
     
-    return pH_from_F(F, dyeK)
+    return pH_from_F(F=F, K=dyeK)
 
-def plot_mixture(wavelength, absorption, aspl, bspl, p=None, sigma=None):
+def plot_mixture(wavelength, absorption, dye, p=None, sigma=None):
     x = wavelength
     y = absorption
 
     if p is None:
-        p, _ = unmix_spectra(x, y, aspl, bspl, sigma=sigma)
+        p, _ = unmix_spectra(x, y, dye, sigma=sigma)
     
     fig = plt.figure(figsize=[6, 5])
 
@@ -137,10 +138,12 @@ def plot_mixture(wavelength, absorption, aspl, bspl, p=None, sigma=None):
 
     p = nominal_values(p)
     
-    mix_spectra = make_mix_spectra(aspl, bspl)
-
+    # plot mixed specturm
+    mix_spectra = make_mix_spectra(dye)
     ax.plot(x, mix_spectra(x, *p), label='Model')
 
+    # plot components
+    aspl, bspl = dye_spline_handler(dye)
     ax.axhline(p[2], c='k', ls='dashed', label='Baseline', lw=1)
     xn = p[-2] + x * p[-1]
     ax.plot(x, p[2] + aspl(xn) * p[0], c='b', ls='dashed', label='Acid', lw=1)
@@ -166,11 +169,15 @@ def plot_mixture(wavelength, absorption, aspl, bspl, p=None, sigma=None):
 
     return fig, (ax, rax)
 
-def spec_from_H(wv, H, dyeConc, dyeK, aspl, bspl):
+def spec_from_H(wv, H, dyeConc, dyeK, dyesplines):
+
+    aspl = dyesplines['acid']
+    bspl = dyesplines['base']
+
     a = dyeConc / (1 + dyeK / H)
     b = dyeConc / (1 + H / dyeK)
     
     return aspl(wv) * a + bspl(wv) * b
 
-def spec_from_pH(wv, pH, dyeConc, dyeK, aspl, bspl):
-    return spec_from_H(wv, 10**-pH, dyeConc, dyeK, aspl, bspl)
+def spec_from_pH(wv, pH, dyeConc, dyeK, dyesplines):
+    return spec_from_H(wv, 10**-pH, dyeConc, dyeK, dyesplines)
