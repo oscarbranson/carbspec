@@ -17,7 +17,7 @@ def smooth(a, win=21):
         The array to smooth.
     win : int
         The size of the smoothing window (number of points)
-
+l
     Returns
     -------
     (array_like, array_like) : tuple of (mean, stderr) of the smoothed array.

@@ -22,7 +22,7 @@ def make_mix_spectra(aspl, bspl):
     -------
     function : a mix_spectra function accepting the arguments (a, b, bkg, c, mc)
     """
-    def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=0):
+    def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=1):
         """
         Predict a spectrum as a mixture of end-member molal absorption factors.
 

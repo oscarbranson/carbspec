@@ -94,11 +94,31 @@ def calc_TB(Sal):
     a, b = (0.0004157, 35.)
     return a * Sal / b
     
-# def calc_KB(TempC, Sal):
-#     param = 
+def calc_KB(TempC, Sal):
+    """
+    Calculate KB
 
-# KBcond = np.exp((-8966.90 - 2890.53 * sqrtSal - 77.942 * Sal +
-#                      1.728 * Sal * sqrtSal - 0.0996 * Sal * Sal) /
-#                     T + (148.0248 + 137.1942 * sqrtSal + 1.62142 * Sal) +
-#                     (-24.4344 - 25.085 * sqrtSal - 0.2474 * Sal) *
-#                     lnT + 0.053105 * sqrtSal * T)  # Dickson90b
+    From Dickson et al (1990b)
+    """
+    TempK = TempC + 273.15
+    sqrtSal = Sal**0.5
+    param = [
+        -8966.90, 
+        2890.53,
+        77.942,
+        1.728,
+        0.0996,
+        148.0248,
+        137.1942,
+        1.62142,
+        -24.4344,
+        25.085,
+        0.2474,
+        0.053105
+        ]
+        
+    return np.exp((param[0] - param[1] * sqrtSal - param[2] * Sal +
+                   param[3] * Sal * sqrtSal - param[4] * Sal * Sal) / TempK + 
+                  (param[5] + param[6] * sqrtSal + param[7] * Sal) +
+                  (param[8] - param[9] * sqrtSal - param[10] * Sal) * np.log(TempK) +
+                  param[11] * sqrtSal * TempK)
