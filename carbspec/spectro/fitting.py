@@ -8,7 +8,7 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
     Parameters
     ==========
     x : tuple
-        A tuple containing the model parameters as (a, b, B0, c, mc)
+        A tuple containing the model parameters as (a, b, B0, c, m)
     wv : array-like
         The wavelength of the data
     aspl, bspl : UnivariateSpline
@@ -23,14 +23,14 @@ def Jacobian(x, wv, aspl, bspl, daspl, dbspl, sigma, **kwargs):
     Jacobian of fitting function as a matrix of shape (n,m) : array-like
     """
     a, b, _, c, m = x
-    # m = 1 + mc / 1000
 
     J = np.ones((len(wv), 5))
     
-    J[:,0] = aspl(wv * m + c)
-    J[:,1] = bspl(wv * m + c)
-    J[:,2] = wv * a * daspl(wv * m + c) + wv * b * dbspl(wv * m + c)
-    J[:,3] = a * daspl(wv * m + c) + b * dbspl(wv * m + c)
+    J[:,0] = aspl(wv * m + c)  # a
+    J[:,1] = bspl(wv * m + c)  # b
+    # bkg is just ones
+    J[:,3] = a * daspl(wv * m + c) + b * dbspl(wv * m + c)  # c
+    J[:,4] = wv * a * daspl(wv * m + c) + wv * b * dbspl(wv * m + c)  # m
     
     return J / sigma.reshape(-1,1)  # this pre-scales the jacobian so that it's appropriate for scaled residuals
 
@@ -68,7 +68,7 @@ def jac_2_cov(fit):
     # covariance matrix is inverse of hessian (H = J.dot(J.T)) scaled to MSE.
     return np.linalg.inv(fit.jac.T.dot(fit.jac)) * s_sq 
 
-def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0, 0],
+def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0, 1],
                  bounds=((0, 0, -0.1, -20, 0.98), (np.inf, np.inf, 0.1, 20, 1.02))):
     """
     Fit a spectrum with a combination of end-member spectra.
@@ -85,17 +85,16 @@ def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0,
     sigma : array-like
         The standard deviation of the data.
     pstart : array-like
-        Start values for parameters (a,b, B0, c, mc) used in fitting.
-        Note m = 1 + mc / 1000, i.e. mc is the percent different from 1.
+        Start values for parameters (a, b, B0, c, m) used in fitting.
     bounds : two-tuple
-        Bounds for parameters (a,b, B0, c, mc) used in fitting.
+        Bounds for parameters (a, b, B0, c, m) used in fitting.
 
     Returns
     =======
     p, cov  : the optimal values for (a, b, B0, c, m) and their covariance matrix
     """
     
-    fit = least_squares(obj_fn, pstart, Jacobian, 
+    fit = least_squares(obj_fn, pstart, jac=Jacobian, 
                         kwargs=dict(wv=wv, Abs=Abs, sigma=sigma, aspl=aspl, bspl=bspl, daspl=aspl.derivative(), dbspl=bspl.derivative()), 
                         bounds=bounds, method='trf', x_scale='jac', loss='soft_l1', tr_solver='exact')
     return fit.x, jac_2_cov(fit)

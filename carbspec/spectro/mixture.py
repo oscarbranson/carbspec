@@ -85,7 +85,7 @@ def unmix_spectra(wavelength, absorption, dye, sigma=None):
 
     Returns
     -------
-    tuple : Containing the (a, b, bkg, c, mc) terms of the mix_spectra function.
+    tuple : Containing the (a, b, bkg, c, m) terms of the mix_spectra function.
     """
     x = wavelength
     y = absorption
