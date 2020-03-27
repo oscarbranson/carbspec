@@ -3,4 +3,6 @@ spec_data/*
 DyeCalibration/*
 .ipynb_checkpoints/*
 *.pyc
-carbspec.egg-info/*
+*.egg-info/*
+*.ipynb_checkpoints
+build/*
