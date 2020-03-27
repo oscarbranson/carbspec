@@ -3,7 +3,7 @@
 ## Submitted Manuscript
 > High-Precision characterisation of indicator dyes by Spectral Fitting: Application to Swawater pH and Alkalinity measurements. Branson, O. & Ellwood, M. *L&O Methods* 
 
-Eletronic supplements are available in the [SI Folder]().
+Electronic supplements are available in the [**SI Folder**](SI/).
 
 ## Installation
 
@@ -23,4 +23,4 @@ spectro.pH_from_spectrum(s['wavelength'], s['Abs'])
 > 3.570124144350996+/-0.006193756635537494
 ```
 
-Further examples of pH and TA calculation on batches of files may be found in the [Figures]() Supplement to the manusript.
+Further examples of pH and TA calculation on batches of files may be found in the [Figures](https://nbviewer.jupyter.org/github/oscarbranson/carbspec/blob/master/SI/Figures.ipynb) Supplement to the manusript.
