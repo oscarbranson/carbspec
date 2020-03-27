@@ -3,7 +3,7 @@ import numpy as np
 import pkg_resources as pkgrs
 from scipy.interpolate import UnivariateSpline
 
-def dye_spline_handler(dye):
+def spline_handler(dye):
     """
     Returns splines for specified dye.
 

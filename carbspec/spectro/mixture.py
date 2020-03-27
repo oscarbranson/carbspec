@@ -2,11 +2,10 @@ import numpy as np
 import uncertainties as un
 from uncertainties.unumpy import log10, nominal_values
 from scipy.optimize import curve_fit
-from .fitting import fit_spectrum
+from .fitting import fit_spectrum, guess_p0
 import matplotlib.pyplot as plt
 
-from carbspec.dye.Ks import dye_K_handler
-from carbspec.dye.splines import dye_spline_handler
+from carbspec import dye as dyes
 
 def make_mix_spectra(dye):
     """
@@ -26,7 +25,7 @@ def make_mix_spectra(dye):
     function : a mix_spectra function accepting the arguments (a, b, bkg, c, mc)
     """
     
-    aspl, bspl = dye_spline_handler(dye)
+    aspl, bspl = dyes.spline_handler(dye)
 
     def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=1):
         """
@@ -90,33 +89,26 @@ def unmix_spectra(wavelength, absorption, dye, sigma=None):
     x = wavelength
     y = absorption
 
-    aspl, bspl = dye_spline_handler(dye)
+    aspl, bspl = dyes.spline_handler(dye)
     
     if sigma is None:
         sigma = np.array(1)
     
-    # starting values for optimisation
-    B0start = y[-1]  # background
-    base_loc = np.argmax(bspl(x))  # wavelength of maximum base absorption
-    bstart = max(y[base_loc] - B0start, 0) / bspl(x[base_loc])  # acid coefficient
-    
-    acid_loc = np.argmax(aspl(x))  # wavelength of maximum acid absorption
-    astart = max(y[acid_loc] - B0start - bstart * bspl(x[acid_loc]), 0) / aspl(x[acid_loc])  # acid coefficient
-
     # re-write this to allow parameter damping and prefer zeros?
-    return fit_spectrum(x, y, aspl, bspl, sigma, [astart, bstart, B0start, 0, 1])
+    return fit_spectrum(x, y, aspl, bspl, sigma)
+
+
 
 def pH_from_F(F, K):
     return -log10(K / F)
 
 def pH_from_spectrum(wavelength, spectrum, dye='BPB', sigma=None, temp=25., sal=35., **kwargs):
 
-    p, cov = unmix_spectra(wavelength, spectrum, dye, sigma)
-    pe = un.correlated_values(p, cov)
+    pe = un.correlated_values(*unmix_spectra(wavelength, spectrum, dye, sigma))
     
     F = pe[1] / pe[0]
     
-    dyeK = dye_K_handler(dye, temp=temp, sal=sal, **kwargs)
+    dyeK = dyes.K_handler(dye, temp=temp, sal=sal, **kwargs)
     
     return pH_from_F(F=F, K=dyeK)
 
@@ -143,7 +135,7 @@ def plot_mixture(wavelength, absorption, dye, p=None, sigma=None):
     ax.plot(x, mix_spectra(x, *p), label='Model')
 
     # plot components
-    aspl, bspl = dye_spline_handler(dye)
+    aspl, bspl = dyes.spline_handler(dye)
     ax.axhline(p[2], c='k', ls='dashed', label='Baseline', lw=1)
     xn = p[-2] + x * p[-1]
     ax.plot(x, p[2] + aspl(xn) * p[0], c='b', ls='dashed', label='Acid', lw=1)
@@ -153,12 +145,16 @@ def plot_mixture(wavelength, absorption, dye, p=None, sigma=None):
 
     ax.legend(scatterpoints=3)
 
+    # plot residuals
     r = y - mix_spectra(x, *p)
     RSS = (r**2).sum()
     R2 = 1 - (RSS / ((y - y.mean())**2).sum())
-    rax.scatter(x, r, s=0.5, c='k')
+    rax.scatter(x, r, s=0.5, c='k', alpha=0.2)
     rax.axhline(0, ls='dashed', c=(0,0,0,0.6))
-    rax.text(.01, .05, f"RSS: {RSS:.2e}  |  $R^2$: {R2:.6f}", transform=rax.transAxes, ha='left', va='bottom')
+    rax.text(.01, .005, f"RSS: {RSS:.2e}  |  $R^2$: {R2:.6f}", transform=rax.transAxes, ha='left', va='bottom')
+
+    rmax = np.percentile(abs(r), 99)
+    rax.set_ylim([- 3 * rmax, 3 * rmax])
 
     ax.set_ylabel('Absorption')
 
@@ -169,15 +165,16 @@ def plot_mixture(wavelength, absorption, dye, p=None, sigma=None):
 
     return fig, (ax, rax)
 
-def spec_from_H(wv, H, dyeConc, dyeK, dyesplines):
+def spec_from_H(wv, H, dyeConc, dye, dyeK=None, temp=25, sal=35):
 
-    aspl = dyesplines['acid']
-    bspl = dyesplines['base']
+    aspl, bspl = dyes.spline_handler(dye)
+    if dyeK is None and isinstance(dye, str):
+        dyeK = dyes.K_handler(dye, temp, sal)
 
     a = dyeConc / (1 + dyeK / H)
     b = dyeConc / (1 + H / dyeK)
     
     return aspl(wv) * a + bspl(wv) * b
 
-def spec_from_pH(wv, pH, dyeConc, dyeK, dyesplines):
-    return spec_from_H(wv, 10**-pH, dyeConc, dyeK, dyesplines)
+def spec_from_pH(wv, pH, dyeConc, dye, dyeK=None):
+    return spec_from_H(wv, 10**-pH, dyeConc, dye, dyeK, temp=25, sal=35)

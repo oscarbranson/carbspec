@@ -92,7 +92,7 @@ def calc_KMCP(temp=25, sal=35, mode='dickson'):
 Kdict = {'MCP': calc_KMCP,
          'BPB': calc_KBPB}
 
-def dye_K_handler(dye, temp, sal, **kwargs):
+def K_handler(dye, temp, sal, **kwargs):
     if dye not in Kdict:
         ValueError(f'dye={dye} is not valid. Please enter one of [' + ', '.join([Kdict.keys()]) + '].')
     return Kdict[dye](temp=temp, sal=sal, **kwargs)

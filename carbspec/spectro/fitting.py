@@ -66,10 +66,22 @@ def jac_2_cov(fit):
     """
     s_sq = 2 * fit.cost / (fit.fun.size - fit.x.size)  # RSS / DOF; fit.cost is half the sum of squares (see curve_fit source)
     # covariance matrix is inverse of hessian (H = J.dot(J.T)) scaled to MSE.
-    return np.linalg.inv(fit.jac.T.dot(fit.jac)) * s_sq 
+    return np.linalg.inv(fit.jac.T.dot(fit.jac)) * s_sq
 
-def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0, 1],
-                 bounds=((0, 0, -0.1, -20, 0.98), (np.inf, np.inf, 0.1, 20, 1.02))):
+def guess_p0(wv, Abs, aspl, bspl):
+    # guess starting values for optimisation
+    B0start = Abs[-10:].mean()  # background
+    
+    base_loc = np.argmax(bspl(wv))  # wavelength of maximum base absorption
+    bstart = max(Abs[base_loc] - B0start, 0) / bspl(wv[base_loc])  # acid coefficient
+    
+    acid_loc = np.argmax(aspl(wv))  # wavelength of maximum acid absorption
+    astart = max(Abs[acid_loc] - B0start - bstart * bspl(wv[acid_loc]), 0) / aspl(wv[acid_loc])  # acid coefficient
+
+    return astart, bstart, B0start, 0, 1
+
+def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), p0=None,
+                 bounds=((0, 0, -np.inf, -20, 0.98), (np.inf, np.inf, np.inf, 20, 1.02))):
     """
     Fit a spectrum with a combination of end-member spectra.
 
@@ -93,8 +105,9 @@ def fit_spectrum(wv, Abs, aspl, bspl, sigma=np.array(1), pstart=[0.1, 0.1, 0, 0,
     =======
     p, cov  : the optimal values for (a, b, B0, c, m) and their covariance matrix
     """
-    
-    fit = least_squares(obj_fn, pstart, jac=Jacobian, 
+    if p0 is None:
+        p0 = guess_p0(wv, Abs, aspl, bspl)
+    fit = least_squares(obj_fn, p0, jac=Jacobian, 
                         kwargs=dict(wv=wv, Abs=Abs, sigma=sigma, aspl=aspl, bspl=bspl, daspl=aspl.derivative(), dbspl=bspl.derivative()), 
                         bounds=bounds, method='trf', x_scale='jac', loss='soft_l1', tr_solver='exact')
     return fit.x, jac_2_cov(fit)
