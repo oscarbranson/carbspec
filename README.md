@@ -1,4 +1,8 @@
-# UV-Vis Spectral Fitting for pH and Alkalinity Determination
+<div align="right">
+  <a href="https://badge.fury.io/py/carbspec"><img src="https://badge.fury.io/py/carbspec.svg" alt="PyPI version" height="18"></a>
+</div>
+
+# ``carbspec`` : Spectral Fitting Tools for pH and Alkalinity Determination
 
 ## Submitted Manuscript
 > High-Precision characterisation of indicator dyes by Spectral Fitting: Application to Swawater pH and Alkalinity measurements. Branson, O. & Ellwood, M. *L&O Methods* 
