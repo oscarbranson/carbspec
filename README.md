@@ -1,4 +1,5 @@
 <div align="right">
+  <a href="https://zenodo.org/badge/latestdoi/227447816"><img src="https://zenodo.org/badge/227447816.svg" alt="DOI" height="18"></a>
   <a href="https://badge.fury.io/py/carbspec"><img src="https://badge.fury.io/py/carbspec.svg" alt="PyPI version" height="18"></a>
 </div>
 
