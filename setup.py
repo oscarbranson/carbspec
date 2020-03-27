@@ -1,7 +1,9 @@
 from setuptools import setup, find_packages
 
+from carbspec import __version__
+
 setup(name='carbspec',
-      version='0.1.0',
+      version=__version__,
       description='Tools for calculating pH and Alkalinity from spectrophotometric data.',
       url='https://github.com/oscarbranson/carbspec',
       author='Oscar Branson',
@@ -11,7 +13,6 @@ setup(name='carbspec',
       keywords=['science', 'chemistry', 'oceanography', 'carbon'],
       classifiers=['Development Status :: 4 - Beta',
                    'Intended Audience :: Science/Research',
-                   'Programming Language :: Python :: 2',
                    'Programming Language :: Python :: 3'],
       install_requires=['numpy',
                         'scipy',
