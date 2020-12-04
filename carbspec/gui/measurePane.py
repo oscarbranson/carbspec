@@ -69,7 +69,12 @@ class measurePane:
 
         self.sampleName = qt.QLineEdit('SampleName')
         fileLayout.addWidget(qt.QLabel('Sample Name:'), 1, 0, 1, 1)
-        fileLayout.addWidget(self.sampleName, 1, 1, 1, 3)
+        fileLayout.addWidget(self.sampleName, 1, 1, 1, 1)
+
+        self.sampleSalinity = qt.QLineEdit('35')
+        self.sampleSalinity.setValidator(qg.QDoubleValidator())
+        fileLayout.addWidget(qt.QLabel('Salinity:'), 1, 2, 1, 1)
+        fileLayout.addWidget(self.sampleSalinity, 1, 3, 1, 1)
 
         self.measLayout.addWidget(filePaths)
 
