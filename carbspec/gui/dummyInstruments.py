@@ -1,11 +1,11 @@
 import numpy as np
 from scipy.stats import norm
-from carbspec.splines import load_dye_splines
+from carbspec.dye.splines import load_splines
 from carbspec.spectro.mixture import make_mix_spectra
 
 import time
 
-splines = load_dye_splines('MCP')
+splines = load_splines('MCP')
 mixture = make_mix_spectra(splines['acid'], splines['base'])
 
 class Spectrometer:
@@ -21,10 +21,19 @@ class Spectrometer:
 
         self.integration_time = 10
         
-        self.wv = np.arange(350, 700)
+        self.wvMin = 400
+        self.wvMax = 700
+        self.wv = np.arange(self.wvMin, self.wvMax)
 
         self.light_only = np.linspace(11000, 55000, self.wv.size) * (norm.pdf(self.wv, 400, 100) + norm.pdf(self.wv, 600, 300)) * 10
         self.scale_factor = 1.5 - 0.002 * (self.wv - 400)
+
+    def set_wavelength_range(self, val, limit):
+        if limit == 'wvMin':
+            self.wvMin = val
+        else:
+            self.wvMax = val
+        self.wv = np.arange(self.wvMin, self.wvMax)
 
     def set_integration_time(self, integration_time):
         self.integration_time = integration_time
