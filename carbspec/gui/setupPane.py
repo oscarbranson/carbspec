@@ -70,50 +70,70 @@ class setupPane:
         optPane = qt.QWidget()
         optGrid = qt.QGridLayout(optPane)
 
+        current_row = 0
+
         # spectrometer connection
         commLink = qt.QComboBox()
         for spec in self.program.findSpectrometer():
             commLink.addItem(spec)
         self.spectro['commLink'] = commLink
-        optGrid.addWidget(qt.QLabel('Comm Port:'), 0, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
-        optGrid.addWidget(commLink, 0, 1, 1, 3)
+        optGrid.addWidget(qt.QLabel('Comm Port:'), current_row, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
+        optGrid.addWidget(commLink, current_row, 1, 1, 3)
 
         self.statusSpectrometer = LEDIndicator()
-        optGrid.addWidget(self.statusSpectrometer, 0, 4, 1, 1)
-        
+        optGrid.addWidget(self.statusSpectrometer, current_row, 4, 1, 1)
+        current_row += 1
+
         # spectrometer setup
         integTime = qt.QLineEdit(self.program.config.get('integrationTime'))
         integTime.setValidator(qg.QIntValidator())
         self.spectro['integrationTime'] = integTime
-        optGrid.addWidget(qt.QLabel('Integration Time (ms):'), 1, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
-        optGrid.addWidget(integTime, 1, 1, 1, 1)
+        optGrid.addWidget(qt.QLabel('Integration Time (ms):'), current_row, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
+        optGrid.addWidget(integTime, current_row, 1, 1, 1)
 
         nScans = qt.QLineEdit(self.program.config.get('nScans'))
         nScans.setValidator(qg.QIntValidator())
         self.spectro['nScans'] = nScans
-        optGrid.addWidget(qt.QLabel('Replicate Scans:'), 1, 2, 1, 1, alignment=QtCore.Qt.AlignRight)
-        optGrid.addWidget(nScans, 1, 3, 1, 1)
-        
-        # dark spectrum
+        optGrid.addWidget(qt.QLabel('Replicate Scans:'), current_row, 2, 1, 1, alignment=QtCore.Qt.AlignRight)
+        optGrid.addWidget(nScans, current_row, 3, 1, 1)
+        current_row += 1
+
+        # wavelength range
+        wvMin = qt.QLineEdit(self.program.config.get('wvMin'))
+        wvMin.setValidator(qg.QIntValidator())
+        self.spectro['wvMin'] = wvMin
+        optGrid.addWidget(qt.QLabel('Wavelength Min'), current_row, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
+        optGrid.addWidget(wvMin, current_row, 1, 1, 1)
+
+        wvMax = qt.QLineEdit(self.program.config.get('wvMax'))
+        wvMax.setValidator(qg.QIntValidator())
+        self.spectro['wvMax'] = wvMax
+        optGrid.addWidget(qt.QLabel('Wavelength Max'), current_row, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
+        optGrid.addWidget(wvMax, current_row, 3, 1, 1)
+        current_row += 1
+
+        # collect buttons
         darkSpectrum = qt.QPushButton('Collect Dark Spectrum')
         self.spectro['darkSpectrum'] = darkSpectrum
-        optGrid.addWidget(darkSpectrum, 2, 0, 1, 2)
-
-        darkProgress = qt.QProgressBar()
-        darkProgress.setTextVisible(False)
-        self.spectro['darkProgress'] = darkProgress
-        optGrid.addWidget(darkProgress, 3, 0, 1, 2)
-
-        # scale factor
+        optGrid.addWidget(darkSpectrum, current_row, 0, 1, 2)
+        
         scaleFactor = qt.QPushButton('Calculate Scale Factor')
         scaleFactor.setDisabled(True)
         self.spectro['scaleFactor'] = scaleFactor
-        optGrid.addWidget(scaleFactor, 2, 2, 1, 2)
+        optGrid.addWidget(scaleFactor, current_row, 2, 1, 2)
+
+        current_row += 1
+
+        # progress bars
+        darkProgress = qt.QProgressBar()
+        darkProgress.setTextVisible(False)
+        self.spectro['darkProgress'] = darkProgress
+        optGrid.addWidget(darkProgress, current_row, 0, 1, 2)
 
         scaleProgress = qt.QProgressBar()
         scaleProgress.setTextVisible(False)
         self.spectro['scaleProgress'] = scaleProgress
-        optGrid.addWidget(scaleProgress, 3, 2, 1, 2)
+        optGrid.addWidget(scaleProgress, current_row, 2, 1, 2)
 
         self.spectroLayout.addWidget(optPane)
         self.spectroLayout.addStretch()
@@ -236,7 +256,11 @@ class setupPane:
         # change integration time or nscans
         self.spectro['integrationTime'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'integrationTime', int))
         self.spectro['nScans'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'nScans', int))
-        
+
+        # change wavelength limits
+        self.spectro['wvMin'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'wvMin', int))
+        self.spectro['wvMax'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'wvMax', int))
+
         # temp calibration changed
         self.temp['temp_c'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_c', float))
         self.temp['temp_m'].textChanged.connect(partial(self.program.update_parameter, 'temp', 'temp_m', float))
