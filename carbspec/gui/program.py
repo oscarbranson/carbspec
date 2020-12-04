@@ -2,7 +2,7 @@ from PyQt5 import QtGui, QtCore
 from dummyInstruments import Spectrometer
 import numpy as np
 from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
-from carbspec.dye import calc_KBPB, calc_KMCP
+from carbspec.dye import K_handler
 from carbspec.dye.splines import load_splines
 import pyqtgraph as pg
 import uncertainties as un
@@ -27,6 +27,7 @@ class Program:
         self.scaleCollected = False
 
         self.mode = 'MCP'
+        self.sal = 35
         
         # data placeholder
         self.data = {}
@@ -239,15 +240,10 @@ class Program:
 
 
     def fitSpectrum(self):
-
-        sal = 35
         
-        if self.mode == 'MCP':
-            K = calc_KMCP(self.data['temp'], sal)
-        elif self.mode == 'BPB':
-            K = calc_KBPB(sal, self.data['temp'])
+        K = K_handler(self.mode, self.data['temp'], self.sal)
         
-        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.splines['acid'], self.splines['base'])
+        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.mode)
 
         self.p = un.correlated_values(p, cov)
 
@@ -268,7 +264,7 @@ class Program:
         p = nominal_values(self.p)
         # draw curves
         graph = self.mainWindow.measurePane.graphAbs
-        mixture = make_mix_spectra(self.splines['acid'], self.splines['base'])
+        mixture = make_mix_spectra(self.mode)
         x = self.data['wv']
         pred = mixture(x, *p)
         baseline = np.full(x.size, p[2])

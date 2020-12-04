@@ -5,8 +5,7 @@ from carbspec.spectro.mixture import make_mix_spectra
 
 import time
 
-splines = load_splines('MCP')
-mixture = make_mix_spectra(splines['acid'], splines['base'])
+mixture = make_mix_spectra('MCP')
 
 class Spectrometer:
     def __init__(self):
