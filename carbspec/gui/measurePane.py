@@ -103,17 +103,24 @@ class measurePane:
         self.modeTabs.addTab(alkPane, 'Alkalinity (BPB)')
 
         self.last5Table = qt.QTableWidget()
-        self.last5Table.setRowCount(5)
-        self.last5Table.setColumnCount(2)
-        self.last5Table.setHorizontalHeaderLabels(['pH', 'Temperature'])
-        self.last5Table.setVerticalHeaderLabels(self.program.last5['Sample'])
-        for i in range(5):
-            self.last5Table.setItem(0, i, qt.QTableWidgetItem(self.program.last5['pH'][i]))
-            self.last5Table.setItem(1, i, qt.QTableWidgetItem(self.program.last5['Temp'][i]))
+        self.last5Table.horizontalHeader().setSectionResizeMode(qt.QHeaderView.Stretch)
+        self.tableColumns = ['Sample', 'pH', 'Temp', 'Sal']
+        self.tableFmts = ['s', '.3f', '.1f', '.1f']
+        self.last5Table.setColumnCount(len(self.tableColumns))
+        self.last5Table.setHorizontalHeaderLabels(self.tableColumns)
+        self.updateTable()
 
         self.measLayout.addWidget(self.last5Table)
 
         self.layout.addWidget(self.measPane, *pos)
+
+    def updateTable(self):
+        last5Table = self.program.df.tail(5).loc[:, self.tableColumns]
+        self.last5Table.setRowCount(len(last5Table.index))
+        self.last5Table.setVerticalHeaderLabels([f'{v:.0f}' for v in last5Table.index[::-1]])
+        for i, ind in enumerate(last5Table.index):
+            for j, col in enumerate(last5Table.columns):
+                self.last5Table.setItem(len(last5Table.index) - i - 1, j, qt.QTableWidgetItem(f'{last5Table.loc[ind,col]:{self.tableFmts[j]}}'))
     
     def setupGraphs(self, *pos):
         self.graphPane = qt.QWidget()
@@ -153,5 +160,12 @@ class measurePane:
     def connections(self):
         # measure and display spectrum
         self.collectSpectrum.clicked.connect(partial(self.program.collectSpectrum, self.graphRaw.lines, 'incremental'))
+        self.collectSpectrum.clicked.connect(self.updateTable)
+        
+        # Sample name changed
+        self.sampleName.textChanged.connect(partial(self.program.update_parameter, 'Sample', 'Sample', str))
+
+        # temp calibration changed
+        self.sampleSalinity.textChanged.connect(partial(self.program.update_parameter, 'sal', 'sal', float))
 
         self.modeTabs.currentChanged.connect(self.program.modeSet)

@@ -25,13 +25,16 @@ class Program:
         self.collectionMode = 'pH'
         self.darkCollected = False
         self.scaleCollected = False
-
-        self.mode = 'MCP'
-        self.sal = 35
         
         # data placeholder
-        self.data = {}
-        self.df = pd.DataFrame(index=[0], columns=['Sample', 'mode', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH'])
+        dataColumns = ['Sample', 'dye', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH']
+        self.data = {k: None for k in dataColumns}
+        self.data['Sample'] = 'SampleName'
+        self.data['Sal'] = 35
+        self.data['Temp'] = 25
+        self.data['dye'] = 'MCP'
+
+        self.df = pd.DataFrame(columns=dataColumns)
 
         self.live = {}
         self.live['wv'] = []
@@ -49,7 +52,7 @@ class Program:
         # self.params = {}
         
         # # Temperature Probe Parameters
-        # self.params['temp'] = {
+        # self.params['Temp'] = {
         #     'temp_m': 1,
         #     'temp_c': 0,
         #     'commLink': None
@@ -64,9 +67,7 @@ class Program:
         self._rsrcpath = pkgrs.resource_filename('carbspec', '/gui/resources/')
         self._cfgfile = self._rsrcpath + 'carbspec.cfg'
 
-        self._config = ConfigParser()
-        self._config.read(self._cfgfile)
-        self.config = self._config['LAST']
+        self.readConfig()
 
         self.connectSpectrometer()
 
@@ -77,11 +78,16 @@ class Program:
         # self.params['spectro']['integrationTime'] = self.config['Last'].get('integrationTime')
         # self.params['spectro']['nScans'] = self.config['Last'].get('nScans')
 
-        # self.params['temp']['temp_m'] = self.config['Last'].get('temp_m')
-        # self.params['temp']['temp_c'] = self.config['Last'].get('temp_c')
+        # self.params['Temp']['temp_m'] = self.config['Last'].get('temp_m')
+        # self.params['Temp']['temp_c'] = self.config['Last'].get('temp_c')
 
         # self.saveDir = self.config['Last'].get('saveDir')
-        # self.mode = self.config['Last'].get('mode')
+        # self.dye = self.config['Last'].get('mode')
+
+    def readConfig(self):
+        self._config = ConfigParser()
+        self._config.read(self._cfgfile)
+        self.config = self._config['LAST']
 
     def writeConfig(self):
         with open(self._cfgfile, 'w') as f:
@@ -125,6 +131,9 @@ class Program:
 
     def readTemp(self):
         return np.random.uniform(22,27)
+
+    # def readSampleName(self):
+    #     print(self.mainWindow.measurePane.sampleName.)
 
     def collectDark(self, line, plot_mode):
         
@@ -202,6 +211,8 @@ class Program:
             self.spectrometer.set_wavelength_range(val, parameter)
             self.data['wv'] = self.spectrometer.wv
         
+        if parameter in self.data:
+            self.data[parameter] = val
 
     def collectSpectrum(self, lines, plot_mode):
         self.mainWindow.measurePane.collectSpectrum.setDisabled(True)
@@ -232,7 +243,7 @@ class Program:
         self.data['absorption'] = np.log10((self.data['channel0'] - self.data['dark']) / (self.data['channel1'] - self.data['dark']))
         self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.data['wv'], y=self.data['absorption'])
 
-        self.data['temp'] = np.mean([t0, t1])
+        self.data['Temp'] = np.mean([t0, t1])
 
         self.fitSpectrum()
 
@@ -240,31 +251,40 @@ class Program:
 
 
     def fitSpectrum(self):
+
+        self.data['K'] = K_handler(self.data['dye'], self.data['Temp'], self.data['Sal'])
         
-        K = K_handler(self.mode, self.data['temp'], self.sal)
-        
-        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.mode)
+        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.data['dye'])
 
         self.p = un.correlated_values(p, cov)
+        self.data.update({k: v for k, v in zip(['a', 'b', 'bkg', 'c', 'm'], self.p)})
 
-        F = self.p[1] / self.p[0]
+        self.data['F'] = self.p[1] / self.p[0]
 
-        pH = pH_from_F(F, K)
+        self.data['pH'] = pH_from_F(self.data['F'], self.data['K'])
         
-        self.storeResult(K, F, pH)
+        # self.storeResult(K, F, pH)
+        self.storeResult()
         self.updateFitGraph()
 
-    def storeResult(self, K, F, pH):
-        i = self.df.index.max() + 1
-        self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
-        self.df.loc[i, ['mode']] = self.mode
-        self.df.loc[i, ['K', 'F', 'pH']] = K, F, pH
-    
+    # def storeResult(self, K, F, pH):
+    def storeResult(self):
+        i = np.nanmax([0, self.df.index.max() + 1])
+        self.df.loc[i] = np.nan
+
+        for k in ['Sample', 'dye', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH']:
+            self.df.loc[i, k] = self.data[k]
+        
+        # self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
+        # self.df.loc[i, ['dye']] = self.data['dye']
+        # self.df.loc[i, ['K', 'F', 'pH']] = K, F, pH
+        # self.df.loc[i, 'Sample'] = self.data['Sample']
+
     def updateFitGraph(self):
         p = nominal_values(self.p)
         # draw curves
         graph = self.mainWindow.measurePane.graphAbs
-        mixture = make_mix_spectra(self.mode)
+        mixture = make_mix_spectra(self.data['dye'])
         x = self.data['wv']
         pred = mixture(x, *p)
         baseline = np.full(x.size, p[2])
@@ -298,13 +318,13 @@ class Program:
     def modeSet(self, i):
         modes = ['MCP', 'BPB']
         if i in modes:
-            self.mode = i
+            self.data['dye'] = i
         elif isinstance(i, int):
-            self.mode = modes[i]
+            self.data['dye'] = modes[i]
         else:
-            ValueError('i musst be an integer or a string')
+            ValueError('i must be an integer or a string')
 
-        self.splines = load_splines(self.mode)
+        self.splines = load_splines(self.data['dye'])
 
         if 'absorption' in self.data:
             self.clearFitGraph()
