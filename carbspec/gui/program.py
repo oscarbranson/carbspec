@@ -274,11 +274,16 @@ class Program:
 
         for k in ['Sample', 'dye', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH']:
             self.df.loc[i, k] = self.data[k]
-        
+
         # self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
         # self.df.loc[i, ['dye']] = self.data['dye']
         # self.df.loc[i, ['K', 'F', 'pH']] = K, F, pH
         # self.df.loc[i, 'Sample'] = self.data['Sample']
+
+    def refitSpectrum(self):
+        self.df.drop(self.df.index.max(), inplace=True)
+        self.clearFitGraph()
+        self.fitSpectrum()
 
     def updateFitGraph(self):
         p = nominal_values(self.p)
@@ -329,6 +334,8 @@ class Program:
         if 'absorption' in self.data:
             self.clearFitGraph()
             self.fitSpectrum()
+
+        print(self.data['dye'])
     
     def clearGraph(self, graph):
         for line in graph.lines.values():

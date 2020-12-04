@@ -97,10 +97,12 @@ class measurePane:
         phPane = qt.QWidget(objectName='tabcontents')
         phLayout = qt.QVBoxLayout(phPane)
         self.modeTabs.addTab(phPane, 'pH (MCP)')
+        self.setupPhPane(phLayout)
 
         alkPane = qt.QWidget(objectName='tabcontents')
         alkLayout = qt.QVBoxLayout(alkPane)
         self.modeTabs.addTab(alkPane, 'Alkalinity (BPB)')
+        self.setupAlkPane(alkLayout)
 
         self.last5Table = qt.QTableWidget()
         self.last5Table.horizontalHeader().setSectionResizeMode(qt.QHeaderView.Stretch)
@@ -113,6 +115,20 @@ class measurePane:
         self.measLayout.addWidget(self.last5Table)
 
         self.layout.addWidget(self.measPane, *pos)
+
+    def setupPhPane(self, layout):
+        self.phControls = {}
+        
+        # re-fit button
+        self.phControls['refit'] = qt.QPushButton('ReFit Data')
+        layout.addWidget(self.phControls['refit'])
+
+    def setupAlkPane(self, layout):
+        self.alkControls = {}
+        
+        # re-fit button
+        self.alkControls['refit'] = qt.QPushButton('ReFit Data')
+        layout.addWidget(self.alkControls['refit'])
 
     def updateTable(self):
         last5Table = self.program.df.tail(5).loc[:, self.tableColumns]
@@ -162,6 +178,13 @@ class measurePane:
         self.collectSpectrum.clicked.connect(partial(self.program.collectSpectrum, self.graphRaw.lines, 'incremental'))
         self.collectSpectrum.clicked.connect(self.updateTable)
         
+        # Re-fit data
+        self.phControls['refit'].clicked.connect(self.program.refitSpectrum)
+        self.phControls['refit'].clicked.connect(self.updateTable)
+
+        self.alkControls['refit'].clicked.connect(self.program.refitSpectrum)
+        self.alkControls['refit'].clicked.connect(self.updateTable)
+
         # Sample name changed
         self.sampleName.textChanged.connect(partial(self.program.update_parameter, 'Sample', 'Sample', str))
 
