@@ -3,7 +3,7 @@ from dummyInstruments import Spectrometer
 import numpy as np
 from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
 from carbspec.dye import calc_KBPB, calc_KMCP
-from carbspec.splines import load_dye_splines
+from carbspec.dye.splines import load_splines
 import pyqtgraph as pg
 import uncertainties as un
 from uncertainties.unumpy import nominal_values, std_devs
@@ -30,7 +30,7 @@ class Program:
         
         # data placeholder
         self.data = {}
-        self.df = pd.DataFrame(index=[0], columns=['Sample', 'mode', 'a', 'b', 'bkg', 'C0', 'C1', 'F', 'Temp', 'Sal', 'K', 'pH'])
+        self.df = pd.DataFrame(index=[0], columns=['Sample', 'mode', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH'])
 
         self.live = {}
         self.live['wv'] = []
@@ -161,7 +161,7 @@ class Program:
 
         self.data['scaleFactor'] = self.data['channel1'] / self.data['channel0']
         self.mainWindow.setupPane.graphScale.lines[0].curve.setData(x=self.data['wv'], y=self.data['scaleFactor'])
-        self.scaleCollected = True  
+        self.scaleCollected = True
 
         self.mainWindow.measurePane.collectSpectrum.setDisabled(False)
 
@@ -191,12 +191,15 @@ class Program:
             self.updateConfig(parameter, val)
 
         # if any spectro parameter is changed, update the dark
-        if parameter in ['integrationTime', 'nScans']:
+        if parameter in ['integrationTime', 'nScans', 'wvMin', 'wvMax']:
             self.specChanged()
         
         if parameter == 'integrationTime' and val is not None:
             self.spectrometer.set_integration_time(val)
         
+        if parameter in ['wvMin', 'wvMax']:
+            self.spectrometer.set_wavelength_range(val, parameter)
+            self.data['wv'] = self.spectrometer.wv
         
 
     def collectSpectrum(self, lines, plot_mode):
@@ -224,7 +227,7 @@ class Program:
                               pbar=pbar, pbar_0=self.config.getint('nScans'))
         self.data['channel1'] = self.incremental['signal']
         t1 = self.readTemp()
-        
+
         self.data['absorption'] = np.log10((self.data['channel0'] - self.data['dark']) / (self.data['channel1'] - self.data['dark']))
         self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.data['wv'], y=self.data['absorption'])
 
@@ -244,7 +247,7 @@ class Program:
         elif self.mode == 'BPB':
             K = calc_KBPB(sal, self.data['temp'])
         
-        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.splines['acid'], self.splines['base'], weights=True)
+        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.splines['acid'], self.splines['base'])
 
         self.p = un.correlated_values(p, cov)
 
@@ -257,7 +260,7 @@ class Program:
 
     def storeResult(self, K, F, pH):
         i = self.df.index.max() + 1
-        self.df.loc[i, ['a', 'b', 'bkg', 'C0', 'C1']] = self.p
+        self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
         self.df.loc[i, ['mode']] = self.mode
         self.df.loc[i, ['K', 'F', 'pH']] = K, F, pH
     
@@ -305,7 +308,7 @@ class Program:
         else:
             ValueError('i musst be an integer or a string')
 
-        self.splines = load_dye_splines(self.mode)
+        self.splines = load_splines(self.mode)
 
         if 'absorption' in self.data:
             self.clearFitGraph()
