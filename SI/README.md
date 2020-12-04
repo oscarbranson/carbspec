@@ -1,0 +1,4 @@
+### Supplementary Information
+1. [**Spectral Fitting**](https://nbviewer.jupyter.org/github/oscarbranson/carbspec/blob/master/SI/Spectral_Fitting.ipynb): A detailed explanation of the spectral fitting method and the propagation of uncertainties to pH calculations.
+2. [**TA Calculation**](https://nbviewer.jupyter.org/github/oscarbranson/carbspec/blob/master/SI/TA_Calculation.ipynb): An error analysis of TA measurements.
+3. [**Figures**](https://nbviewer.jupyter.org/github/oscarbranson/carbspec/blob/master/SI/Figures.ipynb): The code and data to reproduce all figures in the manuscript not included in the previous supplements. Contains examples of using ``carbspec`` to calculate pH and TA from field-collected data.

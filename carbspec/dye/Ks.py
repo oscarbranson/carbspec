@@ -32,7 +32,7 @@ def temp_corr_KBPB(temp):
     C1, C2 = [-2.56020702e-06,  1.00921921e-07]
     return C1 * temp + C2 * temp**2
 
-def calc_KBPB(sal, temp):
+def calc_KBPB(temp=25, sal=35):
     """
     Calculate pKa of dye at sample salinity.
 
@@ -55,7 +55,7 @@ def calc_KBPB(sal, temp):
     return 10**-calc_pKBPB(sal) + temp_corr_KBPB(temp)
 
 # MCP
-def calc_KMCP(temp, sal=35, mode='tris'):
+def calc_KMCP(temp=25, sal=35, mode='dickson'):
     """
     K2 of MCP dye.
 
@@ -89,5 +89,10 @@ def calc_KMCP(temp, sal=35, mode='tris'):
     else:
         raise ValueError('Please specify `mode` as `tris` or `dickson`')
 
-Ks = {'MCP': calc_KMCP,
-      'BPB': calc_KBPB}
+Kdict = {'MCP': calc_KMCP,
+         'BPB': calc_KBPB}
+
+def K_handler(dye, temp, sal, **kwargs):
+    if dye not in Kdict:
+        ValueError(f'dye={dye} is not valid. Please enter one of [' + ', '.join([Kdict.keys()]) + '].')
+    return Kdict[dye](temp=temp, sal=sal, **kwargs)
