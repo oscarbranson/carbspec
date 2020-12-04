@@ -166,6 +166,6 @@ class measurePane:
         self.sampleName.textChanged.connect(partial(self.program.update_parameter, 'Sample', 'Sample', str))
 
         # temp calibration changed
-        self.sampleSalinity.textChanged.connect(partial(self.program.update_parameter, 'sal', 'sal', float))
+        self.sampleSalinity.textChanged.connect(partial(self.program.update_parameter, 'Sal', 'Sal', float))
 
         self.modeTabs.currentChanged.connect(self.program.modeSet)
