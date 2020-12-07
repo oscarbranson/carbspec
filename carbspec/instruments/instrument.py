@@ -1,11 +1,17 @@
 from serial.tools import list_ports
 
+class ConnectionError(Exception):
+    def __init__(self, instrument, message="is not connected."):
+        self.message = f'{instrument} {message}''
+        super.init(self.message)
+
 class Instrument:
     def __init__(self):
         self.connected = False
         self.output = None
 
-        self.instrument_type = 'Template'
+        self.instrument_type = 'Dummy'
+        self.instrument_info = 'Dummy Instrument'
 
         self._com_grep = 'test'
         self._com_params = {}
@@ -29,6 +35,10 @@ class Instrument:
     def disconnect(self):
         raise NotImplementedError(f'Invalid command for {self.instrument_type}')
     
+    def _check_connected(self):
+        if not self.connected:
+            raise ConnectionError(self.instrument_type)
+
     def read(self):
         raise NotImplementedError(f'Invalid command for {self.instrument_type}')
 
