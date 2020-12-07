@@ -4,7 +4,7 @@ from pymodbus.client.sync import ModbusSerialClient
 from .instrument import Instrument
 
 class TempProbe(Instrument):
-    def __init__(self, port=None):
+    def __init__(self):
         super().__init__()
         
         self._com_grep = 'OS-MINIUSB'
