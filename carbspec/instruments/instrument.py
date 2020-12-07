@@ -2,7 +2,7 @@ from serial.tools import list_ports
 
 class ConnectionError(Exception):
     def __init__(self, instrument, message="is not connected."):
-        self.message = f'{instrument} {message}''
+        self.message = f'{instrument} {message}'
         super.init(self.message)
 
 class Instrument:
