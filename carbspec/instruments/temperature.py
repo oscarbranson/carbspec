@@ -32,19 +32,13 @@ class TempProbe(Instrument):
         self.sensor = ModbusSerialClient(**self._com_params)
         self.connected = True
 
-        p = self._com_port
-        print(
-            f'Connected to {self.instrument_info}'
-        )
+        print(f'Connected to {self.instrument_info}')
 
     def disconnect(self):
         self.sensor.close()
         self.connected = False
 
-        p = self._com_port
-        print(
-            f'Disconnected from {self.instrument_info}'
-        )
+        print(f'Disconnected from {self.instrument_info}')
 
     def read(self, n=1):
         """
