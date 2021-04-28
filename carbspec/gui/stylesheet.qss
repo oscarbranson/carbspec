@@ -1,0 +1,95 @@
+/*
+Stylesheet for carbspec GUI
+
+# colours
+colour_lighter = (220, 230, 239) = #dce6ef
+colour_light = (184, 205, 224) = #b8cde0
+colour_main = (95, 142, 185) = #5f8eb9
+colour_dark = (62, 103, 142) = #3e678e
+colour_darker = (31, 52, 71) = #1f3447
+*/
+
+QLabel, QCheckBox, QGroupBox, QRadioButton, QListWidget::item, QPushButton, QToolBox::tab, QSpinBox, QDoubleSpinBox , QComboBox{
+    font: bold 10pt;
+    color: #1f3447;
+}
+
+QLabel#title {
+    font: bold 13pt;
+    color: #3e678e;
+}
+
+QTabWidget::panel {
+    background: #b8cde0;
+}
+
+QTabBar:tab {
+    font: bold 12pt;
+    color: #3e678e;
+    border: 1px solid #3e678e;
+    border-bottom: 0px;
+    background: #5f8eb9;
+    border-radius: 2px;
+    min-width: 200px;
+    min-height: 30px;
+    padding: 2px;
+}
+
+QTabBar:tab:selected {
+    color: #1f3447;
+    background: #b8cde0;
+}
+
+QWidget#tabcontents {
+    background-color: #b8cde0;
+}
+
+QWidget {
+    background-color: #dce6ef;
+}
+
+QPushButton {
+    border-radius: 3px;
+    background-color: #b8cde0;
+    border: 1px solid #5f8eb9;
+    min-height: 25px;
+}
+
+QPushButton:hover {
+    /* border: 2px solid #1f3447; */
+    background-color: #5f8eb9;
+}
+
+QPushButton:pressed {
+    background-color: #3e678e;
+}
+
+QPushButton:disabled {
+    border-radius: 3px;
+    background-color: #dce6ef;
+    border: 1px solid #5f8eb9;
+    color: #5f8eb9;
+}
+
+QProgressBar {
+    background-color: #dce6ef;
+    color: #1f3447;
+    border: none;
+    border-radius: 1px;
+    text-align: center;
+    min-height: 1px;
+    height: 2px;
+}
+
+QProgressBar:chunk {
+    background-color: #3e678e;
+    color: #1f3447;
+}
+
+QLineEdit {
+    background-color: white;
+}
+
+QComboBox {
+    font: normal 10pt;
+}
