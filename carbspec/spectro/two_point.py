@@ -86,6 +86,25 @@ def peak_ID(dat, acid_loc, base_loc, bkg_loc, peak_win=30, smooth_win=21):
     
     return ((acid_abs, acid_se, acid_loc), (base_abs, base_se, base_loc), (bkg_abs, bkg_se, bkg_loc))
 
+def calc_R_from_wavelengths(wv, A, acid_wv, base_wv, bkg_wv, smooth_win=None):
+    if smooth_win is not None:
+        A, A_se = smooth(A, win=smooth_win)
+
+    acid = np.interp(acid_wv, wv, A)
+    base = np.interp(base_wv, wv, A)
+    bkg = np.interp(bkg_wv, wv, A)
+
+    if smooth_win is not None:
+        acid_se = np.interp(acid_wv, wv, A_se)
+        base_se = np.interp(base_wv, wv, A_se)
+        bkg_se = np.interp(bkg_wv, wv, A_se)
+
+        acid = un.ufloat(acid, acid_se)
+        base = un.ufloat(base, base_se)
+        bkg = un.ufloat(bkg, bkg_se)
+
+    return (base - bkg) / (acid - bkg)
+
 def calc_R_from_peaks(peaks):
     acid, base, bkg = peaks
     
