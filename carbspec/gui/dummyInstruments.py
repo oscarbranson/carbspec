@@ -26,6 +26,8 @@ class Spectrometer:
 
         self.light_only = np.linspace(11000, 55000, self.wv.size) * (norm.pdf(self.wv, 400, 100) + norm.pdf(self.wv, 600, 300)) * 10
         self.scale_factor = 1.5 - 0.002 * (self.wv - 400)
+        
+        self.close = self.disconnect
 
     def set_wavelength_range(self, val, limit):
         if limit == 'wvMin':

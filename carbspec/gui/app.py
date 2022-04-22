@@ -32,7 +32,7 @@ class MainWindow(qt.QMainWindow):
         self.initUI()
 
         self.set_styleSheet()
-
+    
     def initUI(self):
 
         self.mainWidget = qt.QWidget()
@@ -73,13 +73,13 @@ class MainWindow(qt.QMainWindow):
         with open(resource_filename('carbspec', 'gui/stylesheet.qss'), 'r') as f:
             styleSheet = f.read()
         self.setStyleSheet(styleSheet)
-
+    
     def closeEvent(self, event):
         self.program.writeConfig()
+
+        if self.program.spectrometer is not None:
+            self.program.spectrometer.close()
         event.accept()
-    
-    def ping(self):
-        print('ping')
 
     def exit(self):
         app.exit()
