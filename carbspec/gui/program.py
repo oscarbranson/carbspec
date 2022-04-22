@@ -120,9 +120,9 @@ class Program:
         
             if line is not None:
                 if plot_mode == 'incremental':
-                    line.curve.setData(x=self.data['wv'], y=self.incremental['signal'])
+                    line.setData(x=self.data['wv'], y=self.incremental['signal'])
                 elif plot_mode == 'live':
-                    line.curve.setData(y=meas)
+                    line.setData(x=self.data['wv'], y=meas)
 
             if pbar is not None:
                 pbar.setValue(i + 1 + pbar_0)
@@ -165,12 +165,11 @@ class Program:
         self.data['channel0'] = self.incremental['signal']
 
         self.spectrometer.channel_1()
-        lines[1].setData(x=self.data['wv'])
         self.readSpectrometer(line=lines[1], plot_mode=plot_mode, pbar=pbar, pbar_0=self.config.getint('nScans'))
         self.data['channel1'] = self.incremental['signal']
 
         self.data['scaleFactor'] = self.data['channel1'] / self.data['channel0']
-        self.mainWindow.setupPane.graphScale.lines[0].curve.setData(x=self.data['wv'], y=self.data['scaleFactor'])
+        self.mainWindow.setupPane.graphScale.lines[0].setData(x=self.data['wv'], y=self.data['scaleFactor'])
         self.scaleCollected = True
 
         self.mainWindow.measurePane.collectSpectrum.setDisabled(False)
@@ -269,16 +268,12 @@ class Program:
 
     # def storeResult(self, K, F, pH):
     def storeResult(self):
-        i = np.nanmax([0, self.df.index.max() + 1])
-        self.df.loc[i] = np.nan
+        i = int(np.nanmax([0, self.df.index.max() + 1]))
 
-        for k in ['Sample', 'dye', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH']:
-            self.df.loc[i, k] = self.data[k]
-
-        # self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
-        # self.df.loc[i, ['dye']] = self.data['dye']
-        # self.df.loc[i, ['K', 'F', 'pH']] = K, F, pH
-        # self.df.loc[i, 'Sample'] = self.data['Sample']
+        self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
+        for k, v in self.data.items():
+            if k not in ['a', 'b', 'bkg', 'c', 'm']:
+                self.df.loc[i, k] = v
 
     def refitSpectrum(self):
         self.df.drop(self.df.index.max(), inplace=True)
