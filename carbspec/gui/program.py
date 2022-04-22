@@ -275,21 +275,28 @@ class Program:
 
 
     def fitSpectrum(self):
-
+        
         self.data['K'] = K_handler(self.data['dye'], self.data['Temp'], self.data['Sal'])
         
-        p, cov = unmix_spectra(self.spectrometer.wv, self.data['absorption'], self.data['dye'])
+        try:
+            p, cov = unmix_spectra(self.spectrometer.wv, self.data['absorption'], self.data['dye'])
 
-        self.p = un.correlated_values(p, cov)
-        self.data.update({k: v for k, v in zip(['a', 'b', 'bkg', 'c', 'm'], self.p)})
+            self.p = un.correlated_values(p, cov)
+            self.data.update({k: v for k, v in zip(['a', 'b', 'bkg', 'c', 'm'], self.p)})
 
-        self.data['F'] = self.p[1] / self.p[0]
+            self.data['F'] = self.p[1] / self.p[0]
 
-        self.data['pH'] = pH_from_F(self.data['F'], self.data['K'])
+            self.data['pH'] = pH_from_F(self.data['F'], self.data['K'])
+
+            self.updateFitGraph()
+
+        except ValueError:
+            for k in ['a', 'b', 'bkg', 'c', 'm', 'F', 'pH']:
+                self.data[k] = np.nan
+            self.p = np.full(5, np.nan)
         
         # self.storeResult(K, F, pH)
         self.storeResult()
-        self.updateFitGraph()
 
     # def storeResult(self, K, F, pH):
     def storeResult(self):
@@ -333,9 +340,9 @@ class Program:
 
     def clearFitGraph(self):
         graph = self.mainWindow.measurePane.graphAbs
-        graph.lines['pred'].setData(y=[])
-        graph.lines['acid'].setData(y=[])
-        graph.lines['base'].setData(y=[])
+        for p in ['pred', 'acid', 'base']:
+            if p in graph.lines:
+                graph.lines[p].setData(y=[])
         rgraph = self.mainWindow.measurePane.graphResid
         rgraph.lines[0].setData(y=[])
     
