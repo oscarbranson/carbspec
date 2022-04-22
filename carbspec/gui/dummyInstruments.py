@@ -36,7 +36,7 @@ class Spectrometer:
             self.wvMax = val
         self.wv = np.arange(self.wvMin, self.wvMax)
 
-    def set_integration_time(self, integration_time):
+    def set_integration_time_ms(self, integration_time):
         self.integration_time = integration_time
 
     def channel_0(self):
