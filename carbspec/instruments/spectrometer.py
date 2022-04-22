@@ -27,7 +27,7 @@ class Spectrometer(sbSpectrometer):
     def from_serial_number(cls, serial: str | None = None):
         return super(Spectrometer, cls).from_serial_number(serial=serial)
     
-    def set_wavelength_range(self, wvMin=None, wvMax=None):
+    def set_wavelength_range(self, wvMin: int | float = None, wvMax: int | float = None):
         if wvMin is not None:
             self.wvMin = wvMin
         if wvMax is not None:
@@ -53,7 +53,7 @@ class Spectrometer(sbSpectrometer):
     def disconnect(self):
         self.close()
 
-    def set_integration_time_ms(self, integration_time_ms):
+    def set_integration_time_ms(self, integration_time_ms: int):
         self.integration_time_micros(integration_time_ms * 1e3)
 
     def channel_0(self):
