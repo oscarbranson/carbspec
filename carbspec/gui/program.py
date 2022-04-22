@@ -294,11 +294,11 @@ class Program:
         graph.lines['pred'] = pg.PlotDataItem(x=x, y=pred, pen=pg.mkPen(color=styles.colour_main, width=2, style=QtCore.Qt.DashLine))
         graph.addItem(graph.lines['pred'])
 
-        acid_color = list(styles.colour_dark) + [100]
+        acid_color = list(styles.colour_acid) + [100]
         graph.lines['acid'] = pg.PlotCurveItem(x=x, y=acid, brush=pg.mkBrush(*acid_color), fillLevel=0.0, pen=(0,0,0,100))
         graph.addItem(graph.lines['acid'])
 
-        base_color = list(styles.colour_main) + [100]
+        base_color = list(styles.colour_base) + [100]
         graph.lines['base'] = pg.PlotCurveItem(x=x, y=base, brush=pg.mkBrush(*base_color), fillLevel=0.0, pen=(0,0,0,100))
         graph.addItem(graph.lines['base'])
 

@@ -9,6 +9,9 @@ colour_lighter = (220, 230, 239)
 colour_dark = (62, 103, 142)
 colour_darker = (31, 52, 71)
 
+colour_acid = colour_dark
+colour_base = (142, 101, 62)
+
 colour_main_str = "rgb({}, {}, {})".format(*colour_main)
 colour_light_str = "rgb({}, {}, {})".format(*colour_light)
 colour_lighter_str = "rgb({}, {}, {})".format(*colour_lighter)
