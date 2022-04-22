@@ -78,7 +78,9 @@ class MainWindow(qt.QMainWindow):
         self.program.writeConfig()
 
         if self.program.spectrometer is not None:
+            msg = f'  -> Disconnected from {self.program.spectrometer.serial_number}'
             self.program.spectrometer.close()
+            print(msg)
         event.accept()
 
     def exit(self):
