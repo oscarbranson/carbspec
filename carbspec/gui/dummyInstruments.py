@@ -22,7 +22,7 @@ class Spectrometer:
         
         self.wvMin = 400
         self.wvMax = 700
-        self.wv = np.arange(self.wvMin, self.wvMax)
+        self.wv = np.arange(self.wvMin, self.wvMax, dtype=float)
 
         self.light_only = np.linspace(11000, 55000, self.wv.size) * (norm.pdf(self.wv, 400, 100) + norm.pdf(self.wv, 600, 300)) * 10
         self.scale_factor = 1.5 - 0.002 * (self.wv - 400)
