@@ -6,6 +6,7 @@ from program import Program
 from setupPane import setupPane
 from measurePane import measurePane
 import styles
+from pkg_resources import resource_filename
 
 class MainWindow(qt.QMainWindow):
     """
@@ -69,7 +70,7 @@ class MainWindow(qt.QMainWindow):
         # self.tabs.addTab(self.optionsTab, 'Options')
     
     def set_styleSheet(self):
-        with open('./stylesheet.qss', 'r') as f:
+        with open(resource_filename('carbspec', 'gui/stylesheet.qss'), 'r') as f:
             styleSheet = f.read()
         self.setStyleSheet(styleSheet)
 
@@ -84,7 +85,7 @@ class MainWindow(qt.QMainWindow):
         app.exit()
 
 if __name__ == '__main__':
-    app = qt.QApplication([])
+    app = qt.QApplication(sys.argv)
     
     app.setStyle('Fusion')
 
