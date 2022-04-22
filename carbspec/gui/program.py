@@ -1,5 +1,6 @@
 from PyQt5 import QtGui, QtCore
-from dummyInstruments import Spectrometer
+# from dummyInstruments import Spectrometer
+from carbspec.instruments.spectrometer import Spectrometer
 import numpy as np
 from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
 from carbspec.dye import K_handler
@@ -68,8 +69,8 @@ class Program:
         self._cfgfile = self._rsrcpath + 'carbspec.cfg'
 
         self.readConfig()
-
-        self.connectSpectrometer()
+        
+        self.spectrometer = None
 
         self.modeSet(self.config.get('mode'))
 
@@ -98,13 +99,25 @@ class Program:
             self._config.set('LAST', parameter, str(value))
         
         self.writeConfig()
-
-    def findSpectrometer(self):
-        return ['Spec1', 'Spec2']
     
     def connectSpectrometer(self):
-        self.spectrometer = Spectrometer()
+        # get SN of selected spectrometer
+        spec_id = self.mainWindow.setupPane.spectro['commLink'].currentText()
+        spec_SN = spec_id.split(': SN-')[-1]
+        
+        # connect to spectrometer
+        self.spectrometer = Spectrometer.from_serial_number(spec_SN)
         self.data['wv'] = self.spectrometer.wv
+        
+        self.mainWindow.setupPane.spectro['statusLED'].setChecked(True)
+        
+    def disconnectSpectrometer(self):
+        self.spectrometer.close()
+        self.spectrometer = None
+        
+        self.data['wv'] = None
+        
+        self.mainWindow.setupPane.spectro['statusLED'].setChecked(False)
 
     def readSpectrometer(self, line=None, plot_mode='incremental', pbar=None, pbar_0=0):
         self.incremental['wv'] = self.data['wv']
@@ -212,12 +225,16 @@ class Program:
         
         if parameter in self.data:
             self.data[parameter] = val
+            
+    def change_spectrometer(self):
+        self.disconnectSpectrometer()
+        self.connectSpectrometer()
 
     def collectSpectrum(self, lines, plot_mode):
         self.mainWindow.measurePane.collectSpectrum.setDisabled(True)
         self.spectrometer.light_on()
         self.spectrometer.sample_present()
-        self.spectrometer.newSample()
+        # self.spectrometer.newSample()
 
         self.clearGraph(self.mainWindow.measurePane.graphAbs)
         self.clearGraph(self.mainWindow.measurePane.graphRaw)
