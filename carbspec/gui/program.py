@@ -107,20 +107,26 @@ class Program:
         
         # connect to spectrometer
         self.spectrometer = Spectrometer.from_serial_number(spec_SN)
-        self.data['wv'] = self.spectrometer.wv
         
         self.mainWindow.setupPane.spectro['statusLED'].setChecked(True)
+        
+        # apply current settings
+        self.spectrometer.set_integration_time_ms(int(self.mainWindow.setupPane.spectro['integrationTime'].text()))
+        self.spectrometer.set_wavelength_range(
+            wvMin=int(self.mainWindow.setupPane.spectro['wvMin'].text()),
+            wvMax=int(self.mainWindow.setupPane.spectro['wvMax'].text())
+        )
         
     def disconnectSpectrometer(self):
         self.spectrometer.close()
         self.spectrometer = None
         
-        self.data['wv'] = None
+        self.spectrometer.wv = None
         
         self.mainWindow.setupPane.spectro['statusLED'].setChecked(False)
 
     def readSpectrometer(self, line=None, plot_mode='incremental', pbar=None, pbar_0=0):
-        self.incremental['wv'] = self.data['wv']
+        self.incremental['wv'] = self.spectrometer.wv
 
         for i in range(self.config.getint('nScans')):
             meas = self.spectrometer.read()
@@ -133,9 +139,9 @@ class Program:
         
             if line is not None:
                 if plot_mode == 'incremental':
-                    line.setData(x=self.data['wv'], y=self.incremental['signal'])
+                    line.setData(x=self.spectrometer.wv, y=self.incremental['signal'])
                 elif plot_mode == 'live':
-                    line.setData(x=self.data['wv'], y=meas)
+                    line.setData(x=self.spectrometer.wv, y=meas)
 
             if pbar is not None:
                 pbar.setValue(i + 1 + pbar_0)
@@ -182,7 +188,7 @@ class Program:
         self.data['channel1'] = self.incremental['signal']
 
         self.data['scaleFactor'] = self.data['channel1'] / self.data['channel0']
-        self.mainWindow.setupPane.graphScale.lines[0].setData(x=self.data['wv'], y=self.data['scaleFactor'])
+        self.mainWindow.setupPane.graphScale.lines[0].setData(x=self.spectrometer.wv, y=self.data['scaleFactor'])
         self.scaleCollected = True
 
         self.mainWindow.measurePane.collectSpectrum.setDisabled(False)
@@ -217,11 +223,13 @@ class Program:
             self.specChanged()
         
         if parameter == 'integrationTime' and val is not None:
-            self.spectrometer.set_integration_time(val)
+            self.spectrometer.set_integration_time_ms(val)
         
-        if parameter in ['wvMin', 'wvMax']:
-            self.spectrometer.set_wavelength_range(val, parameter)
-            self.data['wv'] = self.spectrometer.wv
+        if parameter == 'wvMin':
+            self.spectrometer.set_wavelength_range(wvMin=val)
+        
+        if parameter == 'wvMax':
+            self.spectrometer.set_wavelength_range(wvMax=val)
         
         if parameter in self.data:
             self.data[parameter] = val
@@ -257,7 +265,7 @@ class Program:
         t1 = self.readTemp()
 
         self.data['absorption'] = np.log10((self.data['channel0'] - self.data['dark']) / (self.data['channel1'] - self.data['dark']))
-        self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.data['wv'], y=self.data['absorption'])
+        self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.spectrometer.wv, y=self.data['absorption'])
 
         self.data['Temp'] = np.mean([t0, t1])
 
@@ -270,7 +278,7 @@ class Program:
 
         self.data['K'] = K_handler(self.data['dye'], self.data['Temp'], self.data['Sal'])
         
-        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.data['dye'])
+        p, cov = unmix_spectra(self.spectrometer.wv, self.data['absorption'], self.data['dye'])
 
         self.p = un.correlated_values(p, cov)
         self.data.update({k: v for k, v in zip(['a', 'b', 'bkg', 'c', 'm'], self.p)})
@@ -301,7 +309,7 @@ class Program:
         # draw curves
         graph = self.mainWindow.measurePane.graphAbs
         mixture = make_mix_spectra(self.data['dye'])
-        x = self.data['wv']
+        x = self.spectrometer.wv
         pred = mixture(x, *p)
         baseline = np.full(x.size, p[2])
         xm = p[-2] + x * p[-1]

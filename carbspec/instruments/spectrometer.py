@@ -18,8 +18,8 @@ class Spectrometer(sbSpectrometer):
         self.sample = True
 
         # settings
-        self.wvMin = 400
-        self.wvMax = 700
+        self.wvMin = -np.inf
+        self.wvMax = np.inf
         
         self.update_wv()
             
@@ -27,11 +27,11 @@ class Spectrometer(sbSpectrometer):
     def from_serial_number(cls, serial: str | None = None):
         return super(Spectrometer, cls).from_serial_number(serial=serial)
     
-    def set_wavelength_range(self, val, limit):
-        if limit == 'wvMin':
-            self.wvMin = val
-        else:
-            self.wvMax = val
+    def set_wavelength_range(self, wvMin=None, wvMax=None):
+        if wvMin is not None:
+            self.wvMin = wvMin
+        if wvMax is not None:
+            self.wvMax = wvMax
             
         self.update_wv()
                 
@@ -53,7 +53,7 @@ class Spectrometer(sbSpectrometer):
     def disconnect(self):
         self.close()
 
-    def set_integration_time(self, integration_time_ms):
+    def set_integration_time_ms(self, integration_time_ms):
         self.integration_time_micros(integration_time_ms * 1e3)
 
     def channel_0(self):
