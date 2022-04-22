@@ -271,9 +271,8 @@ class Program:
         i = int(np.nanmax([0, self.df.index.max() + 1]))
 
         self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
-        for k, v in self.data.items():
-            if k not in ['a', 'b', 'bkg', 'c', 'm']:
-                self.df.loc[i, k] = v
+        for k in ['Sample', 'dye', 'F', 'Temp', 'Sal', 'K', 'pH']:
+            self.df.loc[i, k] = self.data[k]
 
     def refitSpectrum(self):
         self.df.drop(self.df.index.max(), inplace=True)
