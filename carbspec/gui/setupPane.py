@@ -59,6 +59,12 @@ class setupPane:
         self.setupGraphs(0, 1, 3, 1)
         
         self.connections()
+        
+    def refreshSpectrometers(self):
+        print('refreshing')
+        self.spectro['commLink'].clear()
+        for spec in list_spectrometers():
+            self.spectro['commLink'].addItem(spec)
 
     def spectrometer(self, *pos):
         
@@ -91,6 +97,10 @@ class setupPane:
         optGrid.addWidget(statusSpectrometer, current_row, 5, 1, 1)
         
         current_row += 1
+        
+        specRefreshButton = qt.QPushButton('Refresh')
+        self.spectro['specRefreshButton'] = specRefreshButton
+        optGrid.addWidget(specRefreshButton, current_row, 4, 1, 1)
         
         # spectrometer setup
         integTime = qt.QLineEdit(self.program.config.get('integrationTime'))
@@ -263,7 +273,9 @@ class setupPane:
     def connections(self):
         # spectrometer connection
         self.spectro['specConnectButton'].clicked.connect(self.program.connectSpectrometer)
+        self.spectro['specRefreshButton'].clicked.connect(self.refreshSpectrometers)
         self.spectro['commLink'].currentIndexChanged.connect(self.program.change_spectrometer)
+        
         
         # change integration time or nscans
         self.spectro['integrationTime'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'integrationTime', int))
