@@ -62,6 +62,9 @@ class MainWindow(qt.QMainWindow):
         self.mainLayout.addWidget(reloadStyle)
         reloadStyle.setShortcut('Shift+Ctrl+R')
         reloadStyle.clicked.connect(self.set_styleSheet)
+        
+        # keyboard shortcuts
+        qt.QShortcut(QtGui.QKeySequence('Ctrl+Q'), self, self.exit)
 
         # # settings tab
         # self.optionsTab = qt.QWidget()
