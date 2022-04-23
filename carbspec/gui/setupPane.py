@@ -66,6 +66,7 @@ class setupPane:
         self.spectro['commLink'].clear()
         for spec in list_spectrometers():
             self.spectro['commLink'].addItem(spec)
+        self.setLastConfig()
             
     def setLastConfig(self):
         if self.program.config.get('spectrometer') in [self.spectro['commLink'].itemText(i) for i in range(self.spectro['commLink'].count())]:
