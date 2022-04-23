@@ -71,13 +71,15 @@ class Program:
         
         self.writeConfig()
     
-    def connectSpectrometer(self):
-        # get SN of selected spectrometer
-        spec_id = self.mainWindow.setupPane.spectro['commLink'].currentText()
-        spec_SN = spec_id.split(': SN-')[-1]
+    def connectSpectrometer(self, id=None):
+        if id is not None:
+            # get SN of selected spectrometer
+            spec_id = self.mainWindow.setupPane.spectro['commLink'].currentText()
+            spec_SN = spec_id.split(': SN-')[-1]
         
         # connect to spectrometer
         self.spectrometer = Spectrometer.from_serial_number(spec_SN)
+        self.config.set('LAST', 'spectrometer', spec_id)
         
         self.mainWindow.setupPane.spectro['statusLED'].setChecked(True)
         

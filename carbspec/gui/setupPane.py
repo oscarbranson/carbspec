@@ -59,12 +59,17 @@ class setupPane:
         self.setupGraphs(0, 1, 3, 1)
         
         self.connections()
+        self.setLastConfig()
         
     def refreshSpectrometers(self):
         print('refreshing')
         self.spectro['commLink'].clear()
         for spec in list_spectrometers():
             self.spectro['commLink'].addItem(spec)
+            
+    def setLastConfig(self):
+        if self.program.config.get('spectrometer') in [self.spectro['commLink'].itemText(i) for i in range(self.spectro['commLink'].count())]:
+            self.program.connectSpectrometer(self.program.config.get('spectrometer'))
 
     def spectrometer(self, *pos):
         
