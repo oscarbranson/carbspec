@@ -1,19 +1,18 @@
-from PyQt5 import QtGui, QtCore
-# from dummyInstruments import Spectrometer
-from carbspec.instruments.spectrometer import Spectrometer
 import numpy as np
-from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
-from carbspec.dye import K_handler
-from carbspec.dye.splines import load_splines
+import pandas as pd
+from PyQt5 import QtGui, QtCore
 import pyqtgraph as pg
 import uncertainties as un
 from uncertainties.unumpy import nominal_values, std_devs
-from configparser import ConfigParser
 import pkg_resources as pkgrs
+from configparser import ConfigParser
 
-import pandas as pd
-
+# from carbspec.instruments.dummy import Spectrometer
 import styles
+from carbspec.instruments.spectrometer import Spectrometer
+from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
+from carbspec.dye import K_handler
+from carbspec.dye.splines import load_splines
 
 class Program:
     def __init__(self, mainWindow):
@@ -49,41 +48,13 @@ class Program:
                       'pH': [''] * 5,
                       'Temp': [''] * 5}
 
-        # # Dict of program paramters - load from file in future?
-        # self.params = {}
-        
-        # # Temperature Probe Parameters
-        # self.params['Temp'] = {
-        #     'temp_m': 1,
-        #     'temp_c': 0,
-        #     'commLink': None
-        #     }
-        # # Spectrometer Parameters
-        # self.params['spectro'] = {
-        #     'commLink': None,
-        #     'integrationTime': 10,
-        #     'nScans': 50
-        # }
-
         self._rsrcpath = pkgrs.resource_filename('carbspec', '/gui/resources/')
         self._cfgfile = self._rsrcpath + 'carbspec.cfg'
-
         self.readConfig()
         
         self.spectrometer = None
 
         self.modeSet(self.config.get('mode'))
-
-    # def loadConfig(self):
-        
-        # self.params['spectro']['integrationTime'] = self.config['Last'].get('integrationTime')
-        # self.params['spectro']['nScans'] = self.config['Last'].get('nScans')
-
-        # self.params['Temp']['temp_m'] = self.config['Last'].get('temp_m')
-        # self.params['Temp']['temp_c'] = self.config['Last'].get('temp_c')
-
-        # self.saveDir = self.config['Last'].get('saveDir')
-        # self.dye = self.config['Last'].get('mode')
 
     def readConfig(self):
         self._config = ConfigParser()
@@ -120,9 +91,7 @@ class Program:
     def disconnectSpectrometer(self):
         self.spectrometer.close()
         self.spectrometer = None
-        
-        self.spectrometer.wv = None
-        
+                
         self.mainWindow.setupPane.spectro['statusLED'].setChecked(False)
 
     def readSpectrometer(self, line=None, plot_mode='incremental', pbar=None, pbar_0=0):
