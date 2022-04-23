@@ -79,10 +79,10 @@ class measurePane:
         self.measLayout.addWidget(filePaths)
 
         self.collectSpectrum = qt.QPushButton('Collect Spectrum')
-        self.collectSpectrum.setShortcut('Ctrl+Return')
+        self.collectSpectrum.setShortcut('Ctrl+Space')
         self.collectSpectrum.setDisabled(True)
         self.measLayout.addWidget(self.collectSpectrum)
-
+        
         self.collectionPBar = qt.QProgressBar()
         self.collectionPBar.setTextVisible(False)
         self.measLayout.addWidget(self.collectionPBar)
