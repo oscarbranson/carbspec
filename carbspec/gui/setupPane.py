@@ -64,12 +64,13 @@ class setupPane:
     def refreshSpectrometers(self):
         print('refreshing')
         self.spectro['commLink'].clear()
-        for spec in list_spectrometers():
+        self.program.spectrometers = list_spectrometers()
+        for spec in self.program.spectrometers:
             self.spectro['commLink'].addItem(spec)
         self.setLastConfig()
             
     def setLastConfig(self):
-        if self.program.config.get('spectrometer') in [self.spectro['commLink'].itemText(i) for i in range(self.spectro['commLink'].count())]:
+        if self.program.config.get('spectrometer') in self.program.spectrometers:
             self.program.connectSpectrometer(self.program.config.get('spectrometer'))
 
     def spectrometer(self, *pos):
@@ -88,9 +89,8 @@ class setupPane:
 
         # spectrometer connection
         commLink = qt.QComboBox()
-        for spec in list_spectrometers():
-            commLink.addItem(spec)
         self.spectro['commLink'] = commLink
+        self.refreshSpectrometers()
         optGrid.addWidget(qt.QLabel('Spectrometers:'), current_row, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
         optGrid.addWidget(commLink, current_row, 1, 1, 3)
 
