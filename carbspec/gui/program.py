@@ -54,7 +54,7 @@ class Program:
         
         self.spectrometer = None
 
-        self.modeSet(self.config.get('mode'))
+        self.dyeSet(self.config.get('dye'))
 
     def readConfig(self):
         self._config = ConfigParser()
@@ -315,12 +315,12 @@ class Program:
         rgraph = self.mainWindow.measurePane.graphResid
         rgraph.lines[0].setData(y=[])
     
-    def modeSet(self, i):
-        modes = ['MCP', 'BPB']
-        if i in modes:
+    def dyeSet(self, i):
+        dyes = ['MCP', 'BPB']
+        if i in dyes:
             self.data['dye'] = i
         elif isinstance(i, int):
-            self.data['dye'] = modes[i]
+            self.data['dye'] = dyes[i]
         else:
             ValueError('i must be an integer or a string')
 
