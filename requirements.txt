@@ -1,0 +1,11 @@
+numpy
+scipy
+matplotlib
+uncertainties
+# instrument communication
+pyserial
+pymodbus
+seabreeze
+# GUI
+PyQt5
+pyqtgraph
