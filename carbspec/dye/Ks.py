@@ -9,7 +9,7 @@ def calc_pKBPB(sal):
     Eq 17 of Nand & Ellwood (2018, doi:10.1002/lom3.10253)
 
     Form:
-    pKa = pKa(t=35) + A (35 - sal)
+    pKa = pKa(s=35) + A (35 - sal)
 
     A = 1.74e-3 +/- 0.8e-4
 
@@ -32,11 +32,25 @@ def temp_corr_KBPB(temp):
     C1, C2 = [-2.56020702e-06,  1.00921921e-07]
     return C1 * temp + C2 * temp**2
 
+# def temp_corr_KBPB_new(temp=25.):
+#     # calculated from R25 = RT * (1 + 6.774e-3 * (25. - T)) of Nand & Ellwood (2018, doi:10.1002/lom3.10253)
+    
+#     # since pH = pK + log10((R - e1) / (e2 - R * e3)),
+#     # K = H * (R - e1) / (e2 - R * e3)
+#     # We want the correction factor KT / K25, which is:
+#     # KT_K25 = ((RT - e1) / (e2 - RT * e3)) / ((R25 - e1) / (e2 - R25 * e3))
+#     # from this, we calculate KT_K25 at a nominal R, fit it as a function of T
+#     # using a second order polynomial.
+    
+#     p = [4.67075747e-05, 7.02630945e-03, 1.00006993e+00]
+    
+#     return np.polyval(p, temp-25.)
+
 def calc_KBPB(temp=25, sal=35):
     """
-    Calculate pKa of dye at sample salinity.
+    Calculate K of dye at sample salinity and temperature.
 
-    Eq 17 of Nand & Ellwood (2018, doi:10.1002/lom3.10253)
+    Eq 17 of Nand & Ellwood (2018,  )
 
     Form:
     pKa = pKa(t=35) + A (35 - sal)
@@ -45,12 +59,14 @@ def calc_KBPB(temp=25, sal=35):
 
     Parameters
     ----------
+    temp : array-like
+        temperature in C
     sal : array_like
         Salinity in PSU
 
     Returns
     -------
-    array_like : pKa of dye at specified salinity
+    array_like : pKa of dye at specified salinity and temperature
     """
     return 10**-calc_pKBPB(sal) + temp_corr_KBPB(temp)
 
