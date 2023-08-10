@@ -62,7 +62,7 @@ class setupPane:
         self.setLastConfig()
         
     def refreshSpectrometers(self):
-        print('refreshing')
+        print('refreshing spectrometers')
         self.spectro['commLink'].clear()
         self.program.spectrometers = list_spectrometers()
         for spec in self.program.spectrometers:
