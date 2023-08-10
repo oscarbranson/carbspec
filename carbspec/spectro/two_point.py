@@ -37,9 +37,43 @@ l
         
     return np.concatenate([pad, sm, pad]), np.concatenate([pad, stderr, pad])
 
+def get_peaks(dat, acid_loc, base_loc, bkg_loc, smooth_win=21):
+    """
+    Get the absorption and standard error of the acid and base peaks at the specified locations.
+
+    Parameters
+    ----------
+    dat : dict
+        A dictionary containing 'wavelength' and 'Abs' items.
+    acid_loc, base_loc, bkg_loc : float
+        The approximate locations of the acid, base and background peaks.
+    smooth_win : int
+        The width of the smoothing window applied to the spectra.
+
+    Returns
+    -------
+    tuple : containing (absorption, stderr, location) of the acid, base, bkg locations.
+    """
+    dat['sm_spec'], dat['se_spec'] = smooth(dat['Abs'], smooth_win)
+    
+    # acid peak
+    acid_abs = np.interp(acid_loc, dat['wavelength'], dat['sm_spec'])
+    acid_se = np.interp(acid_loc, dat['wavelength'], dat['se_spec'])
+    
+    # base_peak
+    base_abs = np.interp(base_loc, dat['wavelength'], dat['sm_spec'])
+    base_se = np.interp(base_loc, dat['wavelength'], dat['se_spec'])
+    
+    # bkg
+    bkg_abs = np.interp(bkg_loc, dat['wavelength'], dat['sm_spec'])
+    bkg_se = np.interp(bkg_loc, dat['wavelength'], dat['se_spec'])
+    
+    return ((acid_abs, acid_se, acid_loc), (base_abs, base_se, base_loc), (bkg_abs, bkg_se, bkg_loc))
+    
+
 def peak_ID(dat, acid_loc, base_loc, bkg_loc, peak_win=30, smooth_win=21):
     """
-    Identify the absorption, standard error and location of peaks in a spectrum.
+    Identify the absorption, standard error and location of peaks in a spectrum given approximate peak locations.
 
     Parameters
     ----------
@@ -123,7 +157,30 @@ def calc_R25(R, temp):
 
     return R * (1 + (A * (25 - temp)))
 
-def pH_from_R(R, temp, sal):
+
+## MCP functions
+# from http://www.doi.org/10.1038/s41598-017-02624-0
+
+def calc_MCP_logk2e2(TK, S):
+    a = -319.8369 + 0.688159 * S - 0.00018374 * S**2
+    b = 10508.724 - 32.9599 * S + 0.059082 * S**2
+    c = 55.54253 - 0.101639 * S
+    d = -0.08112151
+    return (a + b / TK + c * np.log(TK) + d * TK)
+
+def calc_MCP_e1(TK):
+    return -0.004363 + 3.598e-5 * TK
+
+def calc_MCP_e3_e2(TK, S):
+    return - 0.016224 + 2.42851e-4 * TK + 5.05663e-5 * (S - 35)
+
+def calc_MCP_pH(R, T, S):
+    TK = T + 273.15
+    
+    return calc_MCP_logk2e2(TK, S) + unp.log10((R - calc_MCP_e1(TK)) / (1 - R * calc_MCP_e3_e2(TK, S)))
+
+
+def pH_from_R(R, dye='BPB', temp=25., sal=35.):
     """
     Calculate pH from Base/Acid absorption ratio, at known temperature and salinity.
 
@@ -137,6 +194,8 @@ def pH_from_R(R, temp, sal):
     ----------
     R : array_like
         Measured Base/Acid absorption ratio.
+    dye : str
+        The name of the dye you're using, either 'BPB' or 'MCP'.
     temp : array_like
         Temperature of measurement (C)
     sal : array_like
@@ -147,18 +206,21 @@ def pH_from_R(R, temp, sal):
     array_like : Solution pH (Total Scale)
     """
 
-    e1 = 5.3259624e-3
-    e2 = 2.2319033
-    e3 = 3.19e-2
+    if dye == 'BPB':    
+        pKa = calc_pKBPB(sal=sal)
+        R25 = calc_R25(R, temp)
+        e1 = 5.3259624e-3
+        e2 = 2.2319033
+        e3 = 3.19e-2
+        return pKa + unp.log10((R25 - e1) / (e2 - R25 * e3))
 
-    pKa = calc_pKBPB(sal)
-    R25 = calc_R25(R, temp)
-
-    return pKa + unp.log10((R25 - e1) / (e2 - R25 * e3))
-
+    elif dye == 'MCP':
+        return calc_MCP_pH(R=R, T=temp, S=sal)
+    
+    else:
+        raise ValueError("dye must be 'MCP' or 'BPB'.")
 
 # Plotting
-
 def plot_peaks(dat, acid, base, bkg, win=15):
     acid_abs, acid_se, acid_loc = acid
     base_abs, base_se, base_loc = base
@@ -224,25 +286,3 @@ def plot_peaks(dat, acid, base, bkg, win=15):
     fig.tight_layout()
     
     return fig, (fax, aax, bax, bkx)
-
-
-## MCP functions
-# from http://www.doi.org/10.1038/s41598-017-02624-0
-
-def logk2e2(TK, S):
-    a = -319.8369 + 0.688159 * S - 0.00018374 * S**2
-    b = 10508.724 - 32.9599 * S + 0.059082 * S**2
-    c = 55.54253 - 0.101639 * S
-    d = -0.08112151
-    return (a + b / TK + c * np.log(TK) + d * TK)
-
-def e1(TK):
-    return -0.004363 + 3.598e-5 * TK
-
-def e3_e2(TK, S):
-    return - 0.016224 + 2.42851e-4 * TK + 5.05663e-5 * (S - 35)
-
-def pH_MCP(R, T, S):
-    TK = T + 273.15
-    
-    return logk2e2(TK, S) + unp.log10((R - e1(TK)) / (1 - R * e3_e2(TK, S)))
