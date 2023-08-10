@@ -78,7 +78,7 @@ def unmix_spectra(wavelength, absorption, dye, sigma=None):
         the entire spectral range.
     weights : bool or array-like
         If True, fit is weighted by the 1/(S**2 + 1), where S is a spectrum at
-        pKdye.
+        pKdyes.
         If array-like, an array the same length as data to use as 
         weights (sigma: larger = less weight).
 
@@ -108,7 +108,7 @@ def pH_from_spectrum(wavelength, spectrum, dye='BPB', sigma=None, temp=25., sal=
     
     F = pe[1] / pe[0]
     
-    dyeK = dyes.K_handler(dye, temp=temp, sal=sal, **kwargs)
+    dyeK = dyes.K_handler(dye=dye, temp=temp, sal=sal, **kwargs)
     
     return pH_from_F(F=F, K=dyeK)
 
@@ -174,7 +174,7 @@ def spec_from_H(wv, H, dyeConc, dye, dyeK=None, temp=25, sal=35):
     a = dyeConc / (1 + dyeK / H)
     b = dyeConc / (1 + H / dyeK)
     
-    return aspl(wv) * a + bspl(wv) * b
+    return aspl(wv) * a + 0.9825 * bspl(wv) * b
 
-def spec_from_pH(wv, pH, dyeConc, dye, dyeK=None):
-    return spec_from_H(wv, 10**-pH, dyeConc, dye, dyeK, temp=25, sal=35)
+def spec_from_pH(wv, pH, dyeConc, dye, temp=25, sal=35, dyeK=None):
+    return spec_from_H(wv, 10**-pH, dyeConc, dye, dyeK, temp=temp, sal=sal)
