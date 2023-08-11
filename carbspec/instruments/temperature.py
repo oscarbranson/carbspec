@@ -1,16 +1,20 @@
 import numpy as np
 # from pymodbus.client import ModbusSerialClient
 import minimalmodbus
+import time
 
 from .instrument import Instrument
 
 class TempProbe(Instrument):
-    def __init__(self, averaging_period=2):
+    def __init__(self, averaging_period=2, m=1, c=0):
         super().__init__()
         
         self._com_grep = 'OS-MINIUSB'
         self._com_port = self.find_port()
         self._com_unit = 255  # communicates with any connected sensor
+
+        self.m = m
+        self.c = c
 
         self.instrument_type = 'IR Temperature Probe'
         self.instrument_info = f'{self._com_port.product} {self.instrument_type} (SN: {self._com_port.serial_number}) on {self._com_port.device}'
@@ -55,7 +59,7 @@ class TempProbe(Instrument):
         """
         self._check_connected()
         
-        return self.sensor.read_register(0x0B, number_of_decimals=1)
+        return self.sensor.read_register(0x0B, number_of_decimals=1) * self.m + self.c
 
     # sensor-specific functions
     def set_averaging_period(self, seconds=0.1):
@@ -65,6 +69,7 @@ class TempProbe(Instrument):
         self._check_connected()
         response = self.sensor.write_register(registeraddress=0x0A, value=seconds, number_of_decimals=1)
         self.averaging_period = seconds
+        time.sleep(0.1)
     
     def get_averaging_period(self):
         """
