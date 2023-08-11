@@ -8,7 +8,7 @@ import time
 mixture = make_mix_spectra('MCP')
 
 class Spectrometer:
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.light = False
         self.channel = 0
         self.sample = False
@@ -26,15 +26,31 @@ class Spectrometer:
 
         self.light_only = np.linspace(11000, 55000, self.wv.size) * (norm.pdf(self.wv, 400, 100) + norm.pdf(self.wv, 600, 300)) * 10
         self.scale_factor = 1.5 - 0.002 * (self.wv - 400)
-        
-        self.close = self.disconnect
 
-    def set_wavelength_range(self, val, limit):
-        if limit == 'wvMin':
-            self.wvMin = val
-        else:
-            self.wvMax = val
-        self.wv = np.arange(self.wvMin, self.wvMax)
+        self.reference_cell = self.channel_0
+        self.sample_cell = self.channel_1
+
+        self.newSample()
+        # self.close = self.disconnect
+        print('Connected to dummy Spectrometer')
+
+    def set_wavelength_range(self, wvMin: int | float = None, wvMax: int | float = None):
+        if wvMin is not None:
+            self.wvMin = wvMin
+        if wvMax is not None:
+            self.wvMax = wvMax
+            
+        self.update_wv()
+                
+    def update_wv(self):
+        wv = np.arange(self.wvMin, self.wvMax, dtype=float)
+        self.filter = (wv >= self.wvMin) & (wv <= self.wvMax)
+        self.wv = wv[self.filter]
+        
+        self.newSample()
+        self.light_only = np.linspace(11000, 55000, self.wv.size) * (norm.pdf(self.wv, 400, 100) + norm.pdf(self.wv, 600, 300)) * 10
+        self.scale_factor = 1.5 - 0.002 * (self.wv - 400)
+
 
     def set_integration_time_ms(self, integration_time):
         self.integration_time = integration_time
@@ -64,8 +80,9 @@ class Spectrometer:
 
     def read(self):
         time.sleep(self.integration_time / 1000)
+        bkg = np.random.normal(self.bkg, self.noise / self.integration_time, self.wv.size)
         if self.light:
-            I0 = self.light_only * self.integration_time + np.random.normal(self.bkg, self.noise / self.integration_time, self.wv.size)
+            I0 = self.light_only * self.integration_time + bkg
             if self.channel == 0:
                 return I0
             elif self.channel == 1:
@@ -75,20 +92,26 @@ class Spectrometer:
                 else:
                     return I0
         else:
-            return np.random.normal(self.bkg, self.noise / self.integration_time, self.wv.size)
+            return bkg
 
 class TempProbe:
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.lastTemp = self.read()
         self.connected = True
+        print('Connected to dummy TempProbe')
 
     def read(self):
         return np.random.normal(25, 2)
 
 class BeamSwitch:
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.channel = 0
         self.connected = True
+        
+        self.reference_cell = self.channel_0
+        self.sample_cell = self.channel_1
+        
+        print('Connected to dummy BeamSwitch')
     
     def switch(self):
         if self.channel == 0:
@@ -101,6 +124,7 @@ class BeamSwitch:
     
     def channel_1(self):
         self.channel = 1
+        
 
 class LightSource:
     def __init__(self):
