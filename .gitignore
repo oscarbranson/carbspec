@@ -7,3 +7,4 @@ DyeCalibration/*
 *.ipynb_checkpoints
 build/*
 SI/*
+.vscode/*
