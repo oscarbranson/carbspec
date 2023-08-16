@@ -175,10 +175,42 @@ def calc_MCP_e3_e2(TK, S):
     return - 0.016224 + 2.42851e-4 * TK + 5.05663e-5 * (S - 35)
 
 def calc_MCP_pH(R, T, S):
+    """
+    Calculate pH from MCP absorption ratio.
+
+    R = (base - bkg) / (acid - bkg)
+    
+    Wavelengths:
+    base: 578 nm
+    acid: 434 nm
+    bkg: ~690 nm
+    
+    from https://doi.org/10.1021/es200665d
+    """
     TK = T + 273.15
     
     return calc_MCP_logk2e2(TK, S) + unp.log10((R - calc_MCP_e1(TK)) / (1 - R * calc_MCP_e3_e2(TK, S)))
 
+def calc_BPB_pH(R, T, S):
+    """
+    Calculate pH from BPB absorption ratio.
+
+    R = (base - bkg) / (acid - bkg)
+    
+    Wavelengths:
+    base: 590 nm
+    acid: 436 nm
+    bkg: ~690 nm
+    
+    from https://doi.org/10.1002/lom3.10253
+    """
+    pKa = calc_pKBPB(sal=S)
+    R25 = calc_R25(R, T)
+    e1 = 5.3259624e-3
+    e2 = 2.2319033
+    e3 = 3.19e-2
+    
+    return pKa + unp.log10((R25 - e1) / (e2 - R25 * e3))
 
 def pH_from_R(R, dye='BPB', temp=25., sal=35.):
     """
@@ -207,12 +239,7 @@ def pH_from_R(R, dye='BPB', temp=25., sal=35.):
     """
 
     if dye == 'BPB':    
-        pKa = calc_pKBPB(sal=sal)
-        R25 = calc_R25(R, temp)
-        e1 = 5.3259624e-3
-        e2 = 2.2319033
-        e3 = 3.19e-2
-        return pKa + unp.log10((R25 - e1) / (e2 - R25 * e3))
+        return calc_BPB_pH(R=R, T=temp, S=sal)
 
     elif dye == 'MCP':
         return calc_MCP_pH(R=R, T=temp, S=sal)
