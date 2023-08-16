@@ -29,7 +29,7 @@ def make_mix_spectra(dye):
 
     def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=1):
         """
-        Predict a spectrum as a mixture of end-member molal absorption factors.
+        Calculated a spectrum as a mixture of end-member molal absorption factors.
 
         Equation: Abs = bkg + a * acid(xm) + b * base(xm)
         where xm = c + x * m
@@ -57,6 +57,57 @@ def make_mix_spectra(dye):
         return bkg + a * aspl(xn) + b * bspl(xn)
 
     return mix_spectra
+
+def make_mix_components(dye):
+    """
+    Returns a mix_components function incorporating the acid and base splines.
+
+    Parameters
+    ----------
+    dye : str or dict
+        Either the name of the dye you're using, or a dict containing 
+        'acid' and 'base' entries with corresponding 
+        scipy.interpolate.UnivariateSpline objects describing the molal 
+        absorption spectrum of the acid form of the indicator dye across 
+        the entire spectral range.
+
+    Returns
+    -------
+    function : a mix_components function accepting the arguments (a, b, bkg, c, mc)
+    """
+    
+    aspl, bspl = dyes.spline_handler(dye)
+
+    def mix_components(x, a=1, b=1, bkg=0, c=0, m=1):
+        """
+        Predict the individual components of an end-member mixture of molal absorption factors.
+
+        Equation: Abs = bkg + a * acid(xm) + b * base(xm)
+        where xm = c + x * m
+
+        Parameters
+        ----------
+        x : array_like
+            Wavelength
+        a : float
+            acid coefficient
+        b : float
+            base coefficient
+        bkg : float
+            A constant background offset.
+        c : float
+            0th order wavelength adjustment.
+        mc : float
+            1st order wavelength adjustment.
+
+        Returns
+        -------
+        tuple : background, acid, base
+        """
+        xn = c + x * m
+        return bkg, a * aspl(xn), b * bspl(xn)
+
+    return mix_components
 
 def unmix_spectra(wavelength, absorption, dye, sigma=None):
     """
