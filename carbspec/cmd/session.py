@@ -96,6 +96,7 @@ class MeasurementSession:
         
         self.spectrometer.set_integration_time_ms(self.config.getint('spec_integrationtime'))
         self.spectrometer.set_wavelength_range(self.config.getfloat('spec_wvmin'), self.config.getfloat('spec_wvmax'))
+        self.boxcar_width = self.config.getint('spec_boxcarwidth')
         
         self.wv = self.spectrometer.wv
     
