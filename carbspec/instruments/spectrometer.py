@@ -22,7 +22,6 @@ class Spectrometer(sbSpectrometer):
         # settings
         self.wvMin = -np.inf
         self.wvMax = np.inf
-        self.boxcar_width = None
         
         self.update_wv()
         
@@ -53,10 +52,7 @@ class Spectrometer(sbSpectrometer):
             correct_dark_counts=correct_dark_counts,
             correct_nonlinearity=correct_nonlinearity
         )
-        
-        if self.boxcar_width is not None:
-            intensities = np.convolve(intensities, np.ones(self.boxcar_width) / self.boxcar_width, mode='same')
-        
+                
         return intensities[self.filter]
 
         
