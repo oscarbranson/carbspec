@@ -173,7 +173,7 @@ class MeasurementSession:
         self.K = K_handler(self.dye, self.temp, self.sal)
         self.pH = pH_from_F(self.F, self.K)
     
-    def measure_sample(self, sample_name=None, plot_vars=['absorbance', 'dark corrected', 'scale factor', 'raw', ]):
+    def measure_sample(self, sample_name=None, plot_vars=['absorbance', 'residuals', 'dark corrected']):
         if self.dark is None:
             raise ValueError('Dark spectrum not collected. Run collect_dark() first.')
         if self.scale_factor is None:
@@ -202,8 +202,8 @@ class MeasurementSession:
         vardict = {
             'wv': self.wv,
             'dark': self.dark,
-            'light_reference': self.light_reference,
-            'light_sample': self.light_sample,
+            'light_reference': self.light_reference_raw,
+            'light_sample': self.light_sample_raw,
             'scale_factor': self.scale_factor,
             'absorbance': self.absorbance,
         }
@@ -231,7 +231,7 @@ class MeasurementSession:
         with open(self.summary_file, 'a') as f:
             f.write(data)
     
-    def plot_spectrum(self, include=['absorbance', 'dark corrected', 'scale factor', 'raw', ]):
+    def plot_spectrum(self, include=['absorbance', 'dark corrected', 'scale factor', 'raw', 'resid']):
         if isinstance(include, str):
             include = [include]
         
@@ -275,6 +275,14 @@ class MeasurementSession:
                         axs[i].fill_between(self.wv, 0, base, alpha=0.2, label='base')
                     
                     axs[i].set_ylabel('absorbance')
+                case 'residuals':
+                    if self.fit_p is not None:
+                        pred = self._spec_fn(self.wv, *unp.nominal_values(self.fit_p))
+                        resid = self.absorbance - pred
+                        
+                        axs[i].scatter(self.wv, resid, label='residuals', color='k', s=1)
+                        axs[i].axhline(0, color=(0,0,0,0.6), lw=0.5)
+
 
         axs[-1].set_xlim(self.config.getfloat('spec_wvmin'), self.config.getfloat('spec_wvmax'))
         axs[-1].set_xlabel('wavelength (nm)')
