@@ -8,12 +8,11 @@ import matplotlib.pyplot as plt
 import uncertainties as un
 import uncertainties.unumpy as unp
 
-from carbspec.instruments.dummy import BeamSwitch, Spectrometer, TempProbe
-# from carbspec.instruments import BeamSwitch, Spectrometer, TempProbe
+# from carbspec.instruments.dummy import BeamSwitch, Spectrometer, TempProbe
+from carbspec.instruments import BeamSwitch, Spectrometer, TempProbe
 
 from carbspec.dye import K_handler
-from carbspec.spectro.mixture import unmix_spectra, pH_from_F, make_mix_spectra
-from carbspec.dye.splines import load_splines
+from carbspec.spectro.mixture import unmix_spectra, pH_from_F, make_mix_spectra, make_mix_components
 
 class MeasurementSession:
     def __init__(self, dye='MCP', config_file=None, save=True, plotting=True):
@@ -39,13 +38,16 @@ class MeasurementSession:
         self.light_sample = None
         self.absorbance = None
         
+        self.boxcar_width = self.config.getint('spec_boxcarwidth')
+        self.splines = self.config.get('splines')
+        
         self.fit_p = None
         self.F = None
         self.K = None
         self.pH = None
         
-        self._spec_fn = make_mix_spectra(self.dye)
-        self._splines = load_splines(self.dye)
+        self._spec_fn = make_mix_spectra(self.splines)
+        self._spec_components = make_mix_components(self.splines)
         
         self.connect_Instruments()
         
@@ -95,21 +97,28 @@ class MeasurementSession:
         self.spectrometer = Spectrometer()
         
         self.spectrometer.set_integration_time_ms(self.config.getint('spec_integrationtime'))
-        self.spectrometer.set_wavelength_range(self.config.getfloat('spec_wvmin'), self.config.getfloat('spec_wvmax'))
-        self.boxcar_width = self.config.getint('spec_boxcarwidth')
+        # self.spectrometer.set_wavelength_range(self.config.getfloat('spec_wvmin'), self.config.getfloat('spec_wvmax'))
+                
+        self._wv = self.spectrometer.wv
+        self._wv_filter = (self._wv >= self.config.getfloat('spec_wvmin')) & (self._wv <= self.config.getfloat('spec_wvmax'))
+
+        self.wv = self._wv[self._wv_filter]
         
-        self.wv = self.spectrometer.wv
-    
     def connect_Instruments(self):
         self.connect_TempProbe()
         self.connect_BeamSwitch()
         self.connect_Spectrometer()
             
     def read_spectrometer(self):
-        spec = np.zeros_like(self.wv)
+        spec = np.zeros_like(self._wv)
         for i in range(self.config.getint('spec_nscans')):
             spec += self.spectrometer.read()
-        return spec
+        spec /= self.config.getint('spec_nscans')
+        
+        if self.boxcar_width is not None:
+            spec = np.convolve(spec, np.ones(self.boxcar_width) / self.boxcar_width, mode='same')
+
+        return spec[self._wv_filter]
 
     def collect_dark(self):
         input('Ensure the light is off and the reference cell is in the beam path. Press enter to continue.')
@@ -121,10 +130,10 @@ class MeasurementSession:
         input('Place the reference material in both cells. Switch the light source on. Press enter to continue.')
         self.scale_factor = np.ones_like(self.wv)
         self.collect_spectrum()
-        self.scale_factor = self.light_sample / self.light_reference
+        self.scale_factor = self.light_sample_raw / self.light_reference_raw
         self.save_spectrum(vars=['wv','dark','light_reference', 'light_sample','scale_factor'])
         
-        self.light_sample /= self.scale_factor
+        self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
         
         if self.plotting:
             self.plot_spectrum(['raw', 'scale factor', 'dark corrected'])
@@ -135,17 +144,19 @@ class MeasurementSession:
         temp_start = self.temp_probe.read()
         
         self.beam_switch.reference_cell()
-        self.spectrometer.reference_cell()  # for dummy
+        # self.spectrometer.reference_cell()  # for dummy
         time.sleep(0.1)
-        self.light_reference = self.read_spectrometer()
+        self.light_reference_raw = self.read_spectrometer()
+        self.light_reference = self.light_reference_raw - self.dark
         
         temp_mid = self.temp_probe.read()
         time.sleep(0.1)
         
         self.beam_switch.sample_cell()
-        self.spectrometer.sample_cell()  # for dummy
+        # self.spectrometer.sample_cell()  # for dummy
         time.sleep(0.1)
-        self.light_sample = self.read_spectrometer() / self.scale_factor
+        self.light_sample_raw = self.read_spectrometer()
+        self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
         
         temp_end = self.temp_probe.read()
         
@@ -154,10 +165,10 @@ class MeasurementSession:
         self.timestamp = dt.datetime.now()
                 
     def calc_absorbance(self):
-        self.absorbance = np.log10(self.light_reference / self.light_sample)
+        self.absorbance = -1 * np.log10(self.light_sample / self.light_reference)
     
     def calc_pH(self):
-        self.fit_p = un.correlated_values(*unmix_spectra(self.wv, self.absorbance, 'MCP'))
+        self.fit_p = un.correlated_values(*unmix_spectra(self.wv, self.absorbance, self.splines))
         self.F = self.fit_p[1] / self.fit_p[0]
         self.K = K_handler(self.dye, self.temp, self.sal)
         self.pH = pH_from_F(self.F, self.K)
@@ -220,19 +231,6 @@ class MeasurementSession:
         with open(self.summary_file, 'a') as f:
             f.write(data)
     
-    def calc_fit_components(self):
-        p = unp.nominal_values(self.fit_p)
-
-        pred = self._spec_fn(self.wv, *p)
-
-        x = self.wv
-        baseline = baseline = np.full(x.size, p[2])
-        xm = p[-2] + x * p[-1]
-        acid = baseline + self._splines['acid'](xm) * p[0]
-        base = baseline + self._splines['base'](xm) * p[1]
-        
-        return pred, acid, base
-    
     def plot_spectrum(self, include=['absorbance', 'dark corrected', 'scale factor', 'raw', ]):
         if isinstance(include, str):
             include = [include]
@@ -256,21 +254,22 @@ class MeasurementSession:
                 case 'raw':
                     axs[i].plot(self.wv, self.dark, label='dark', color='grey')
                     if self.light_reference is not None:
-                        axs[i].plot(self.wv, self.light_reference, label='reference', color='C0')
+                        axs[i].plot(self.wv, self.light_reference_raw, label='reference', color='C0')
                     if self.light_sample is not None:
-                        axs[i].plot(self.wv, self.light_sample * self.scale_factor, label='sample', color='C1')
+                        axs[i].plot(self.wv, self.light_sample_raw, label='sample', color='C1')
                     axs[i].set_ylabel('raw counts')
                 case 'scale factor':
                     axs[i].plot(self.wv, self.scale_factor, label='scale factor', color='C3')
                 case 'dark corrected':
-                    axs[i].plot(self.wv, self.light_reference - self.dark, label='reference', color='C0')
-                    axs[i].plot(self.wv, self.light_sample - self.dark, label='sample', color='C1')
+                    axs[i].plot(self.wv, self.light_reference, label='reference', color='C0')
+                    axs[i].plot(self.wv, self.light_sample, label='sample', color='C1')
                     axs[i].set_ylabel('counts - dark')
                 case 'absorbance':
                     axs[i].scatter(self.wv, self.absorbance, label='sample', color='k', s=1)
                     
                     if self.fit_p is not None:
-                        pred, acid, base = self.calc_fit_components()
+                        pred = self._spec_fn(self.wv, *unp.nominal_values(self.fit_p))
+                        _, acid, base = self._spec_components(self.wv, *unp.nominal_values(self.fit_p))
                         axs[i].plot(self.wv, pred, color='r', lw=1, label='fit')
                         axs[i].fill_between(self.wv, 0, acid, alpha=0.2, label='acid')
                         axs[i].fill_between(self.wv, 0, base, alpha=0.2, label='base')
