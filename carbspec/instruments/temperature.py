@@ -59,7 +59,7 @@ class TempProbe(Instrument):
         """
         self._check_connected()
         
-        return self.sensor.read_register(0x0B, number_of_decimals=1) * self.m + self.c
+        return np.round(self.sensor.read_register(0x0B, number_of_decimals=1) * self.m + self.c, 2)
 
     # sensor-specific functions
     def set_averaging_period(self, seconds=0.1):
