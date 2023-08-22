@@ -8,8 +8,14 @@ import matplotlib.pyplot as plt
 import uncertainties as un
 import uncertainties.unumpy as unp
 
-# from carbspec.instruments.dummy import BeamSwitch, Spectrometer, TempProbe
-from carbspec.instruments import BeamSwitch, Spectrometer, TempProbe
+
+try:
+    from carbspec.instruments import BeamSwitch, Spectrometer, TempProbe
+    dummy = False
+except:
+    print('Instrument connection error: using dummy instruments')
+    from carbspec.instruments.dummy import BeamSwitch, Spectrometer, TempProbe
+    dummy = True
 
 from carbspec.dye import K_handler
 from carbspec.spectro.mixture import unmix_spectra, pH_from_F, make_mix_spectra, make_mix_components
@@ -52,7 +58,7 @@ class MeasurementSession:
         self.connect_Instruments()
         
         self.savedir = self.config['savedir']
-        os.makedirs(self.savedir, exist_ok=True)
+        os.makedirs(os.path.join(self.savedir, 'raw'), exist_ok=True)
         
         # Spectra Saving
         self.save = save
@@ -60,7 +66,7 @@ class MeasurementSession:
             print(f'Saving spectra to {self.savedir}')
         
         # Summary File Saving
-        self.summary_file = os.path.join(self.savedir, f"{self.dye}_summary.csv")
+        self.summary_file = os.path.join(self.savedir, f"{self.dye}_summary.dat")
         if self.summary_file is not None:
             print(f'Saving summary to {self.summary_file}')
 
@@ -77,7 +83,7 @@ class MeasurementSession:
     
     def updateConfig(self, parameter, value):
         if parameter in self._config['DEFAULT']:
-            self._config.set('LAST', parameter, str(value))
+            self._config.set(self.dye, parameter, str(value))
             
     def connect_TempProbe(self):
         self.temp_probe = TempProbe(
@@ -103,12 +109,46 @@ class MeasurementSession:
         self._wv_filter = (self._wv >= self.config.getfloat('spec_wvmin')) & (self._wv <= self.config.getfloat('spec_wvmax'))
 
         self.wv = self._wv[self._wv_filter]
-        
+    
     def connect_Instruments(self):
         self.connect_TempProbe()
         self.connect_BeamSwitch()
         self.connect_Spectrometer()
             
+    def find_max_integration_time(self):
+        
+        ref_integration_time = 1
+        sample_integration_time = 1
+
+        self.beam_switch.reference_cell()
+        time.sleep(0.1)
+        
+        self.spectrometer.set_integration_time_ms(ref_integration_time)
+        trans = self.spectrometer.read()[self._wv_filter]
+
+        while trans.max() < 5.5e4:
+            ref_integration_time += 1
+            self.spectrometer.set_integration_time_ms(ref_integration_time)
+            trans = self.spectrometer.read()[self._wv_filter]
+
+        self.beam_switch.sample_cell()
+        time.sleep(0.1)
+
+        self.spectrometer.set_integration_time_ms(ref_integration_time)
+        trans = self.spectrometer.read()
+
+        while trans.max() < 5.5e4:
+            sample_integration_time += 1
+            self.spectrometer.set_integration_time_ms(sample_integration_time)
+            trans = self.spectrometer.read()[self._wv_filter]
+
+        max_integration_time = min(ref_integration_time, sample_integration_time)
+        
+        self.spectrometer.set_integration_time_ms(max_integration_time)
+        
+        self.updateConfig('spec_integrationtime', max_integration_time)
+        
+        
     def read_spectrometer(self):
         spec = np.zeros_like(self._wv)
         for i in range(self.config.getint('spec_nscans')):
@@ -144,7 +184,8 @@ class MeasurementSession:
         temp_start = self.temp_probe.read()
         
         self.beam_switch.reference_cell()
-        # self.spectrometer.reference_cell()  # for dummy
+        if dummy:
+            self.spectrometer.reference_cell()  # for dummy
         time.sleep(0.1)
         self.light_reference_raw = self.read_spectrometer()
         self.light_reference = self.light_reference_raw - self.dark
@@ -153,7 +194,8 @@ class MeasurementSession:
         time.sleep(0.1)
         
         self.beam_switch.sample_cell()
-        # self.spectrometer.sample_cell()  # for dummy
+        if dummy:
+            self.spectrometer.sample_cell()  # for dummy
         time.sleep(0.1)
         self.light_sample_raw = self.read_spectrometer()
         self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
@@ -163,7 +205,8 @@ class MeasurementSession:
         self.temp = (temp_start + temp_mid + temp_end) / 3
         
         self.timestamp = dt.datetime.now()
-                
+        print(self.timestamp)
+        
     def calc_absorbance(self):
         self.absorbance = -1 * np.log10(self.light_sample / self.light_reference)
     
@@ -197,7 +240,9 @@ class MeasurementSession:
         if self.sample is not None:
             filename = filename.replace('.csv', f'_{self.sample}.csv')
         
-        outfile = os.path.join(self.savedir, filename)
+        self._outfile = os.path.join(self.savedir, 'raw', filename)
+        
+        print(self._outfile)
         
         vardict = {
             'wv': self.wv,
@@ -210,15 +255,21 @@ class MeasurementSession:
         
         out = np.vstack([vardict[k] for k in vars]).T
 
-        header = '\n'.join([
+        header = [
             f'# Config: {self.config_file}',
             f'# Time: {self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}',
             f'# Temp: {self.temp:.2f}',
             f'# Sal: {self.sal:.2f}',
-            ','.join(vars)
-            ])
+            f'# Dye: {self.dye}',
+            f'# Splines: {self.splines}',
+        ]
+        
+        if self.pH is not None:
+            header.append(f'# pH: {self.pH:.4f}')
+        
+        header = '\n'.join(header + [','.join(vars)])
 
-        np.savetxt(outfile, out, delimiter=',', header=header, comments='')
+        np.savetxt(self._outfile, out, delimiter=',', header=header, comments='')
     
     def save_summary(self):
         if not os.path.exists(self.summary_file):
