@@ -115,7 +115,9 @@ class MeasurementSession:
         self.connect_BeamSwitch()
         self.connect_Spectrometer()
             
-    def find_max_integration_time(self):
+    def find_max_integration_time(self, maintain_total_collection_time=True):
+        
+        total_collection_time = self.config.getint('spec_nscans') * self.config.getint('spec_integrationtime')
         
         ref_integration_time = 1
         sample_integration_time = 1
@@ -145,6 +147,11 @@ class MeasurementSession:
         max_integration_time = min(ref_integration_time, sample_integration_time)
         
         self.spectrometer.set_integration_time_ms(max_integration_time)
+        
+        new_total_collection_time = max_integration_time * self.config.getint('spec_nscans')
+        
+        if new_total_collection_time < total_collection_time and maintain_total_collection_time:
+            self.config.set('spec_nscans', str(int(total_collection_time / max_integration_time)))
         
         self.updateConfig('spec_integrationtime', max_integration_time)
         
