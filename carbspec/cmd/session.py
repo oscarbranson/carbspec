@@ -81,9 +81,11 @@ class MeasurementSession:
         with open(self.config_file, 'w') as f:
             self._config.write(f)
     
-    def updateConfig(self, parameter, value):
+    def updateConfig(self, parameter, value, section=None):
+        if section is None:
+            section = self.dye
         if parameter in self._config['DEFAULT']:
-            self._config.set(self.dye, parameter, str(value))
+            self._config.set(section, parameter, str(value))
             
     def connect_TempProbe(self):
         self.temp_probe = TempProbe(
@@ -136,8 +138,8 @@ class MeasurementSession:
         self.beam_switch.sample_cell()
         time.sleep(0.1)
 
-        self.spectrometer.set_integration_time_ms(ref_integration_time)
-        trans = self.spectrometer.read()
+        self.spectrometer.set_integration_time_ms(sample_integration_time)
+        trans = self.spectrometer.read()[self._wv_filter]
 
         while trans.max() < 5.5e4:
             sample_integration_time += 1
@@ -151,10 +153,11 @@ class MeasurementSession:
         new_total_collection_time = max_integration_time * self.config.getint('spec_nscans')
         
         if new_total_collection_time < total_collection_time and maintain_total_collection_time:
-            self.config.set('spec_nscans', str(int(total_collection_time / max_integration_time)))
+            self.updateConfig('spec_nscans', int(total_collection_time / max_integration_time), section='DEFAULT')
         
-        self.updateConfig('spec_integrationtime', max_integration_time)
+        self.updateConfig('spec_integrationtime', max_integration_time, section='DEFAULT')
         
+        self.writeConfig()
         
     def read_spectrometer(self):
         spec = np.zeros_like(self._wv)
@@ -212,7 +215,7 @@ class MeasurementSession:
         self.temp = (temp_start + temp_mid + temp_end) / 3
         
         self.timestamp = dt.datetime.now()
-        print(self.timestamp)
+        print(f'{self.timestamp}\t{self.sample}')
         
     def calc_absorbance(self):
         self.absorbance = -1 * np.log10(self.light_sample / self.light_reference)
