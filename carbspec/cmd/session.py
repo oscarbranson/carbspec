@@ -21,7 +21,7 @@ except:
 
 from carbspec.dye import K_handler
 from carbspec.spectro.mixture import unmix_spectra, pH_from_F, make_mix_spectra, make_mix_components
-from carbspec.alkalinity import TA_from_pH
+from carbspec.alkalinity import TA_from_pH, calc_acid_strength
 
 class pHMeasurementSession:
     def __init__(self, dye='MCP', config_file=None, save=True, plotting=True):
@@ -242,10 +242,6 @@ class pHMeasurementSession:
         
         self.calc_pH()
 
-        sample_info = f'{self.timestamp}\t{self.sample}'
-        pyperclip.copy(sample_info)
-        print(sample_info)
-
         self.save_spectrum()
         self.save_summary()
                 
@@ -377,15 +373,13 @@ class TAMeasurementSession(pHMeasurementSession):
         
         self.sample_weight_spreadsheet = self.config.get('sample_weight_spreadsheet')
     
-    def calc_TA(self):
-        
+    def get_sample_weights(self, crm=False, all=False):
         valid_input = False
         while not valid_input:
-            weights = pd.read_excel(self.sample_weight_spreadsheet, parse_dates=['timestamp'])
-            weights.dropna(inplace=True, subset=['timestamp'])
-            weights.set_index(['timestamp', 'sample'], inplace=True)
+            all_weights = pd.read_excel(self.sample_weight_spreadsheet, parse_dates=['timestamp'])
+            all_weights.set_index('timestamp', inplace=True)
             
-            weights = weights.loc[(self.timestamp, self.sample), :]
+            weights = all_weights.loc[self.timestamp, :]
             
             if weights.empty:
                 input(f'Sample {self.sample} at {self.timestamp} is not in the weight spreadsheet.\n Check the spreadsheet, resave it, then press Enter to continue.')
@@ -399,11 +393,21 @@ class TAMeasurementSession(pHMeasurementSession):
                 input('No acid weight present. Please check the spreadsheet, resave it, then press Enter to continue.')
                 continue
             
-            if np.isnan(weights['C_acid']):
-                input('No acid concentration present. Please check the spreadsheet, resave it, then press Enter to continue.')
-                continue
+            if not crm:
+                if np.isnan(weights['C_acid']):
+                    input('No acid concentration present. Please check the spreadsheet, resave it, then press Enter to continue.')
+                    continue
 
             valid_input = True
+            
+            if all:
+                return all_weights
+            
+            return weights
+    
+    def calc_TA(self):
+        
+        weights = self.get_sample_weights()
             
         self.m_sample = weights['m_sample']
         self.m_acid = weights['m_acid']
@@ -411,13 +415,60 @@ class TAMeasurementSession(pHMeasurementSession):
             
         self.TA = TA_from_pH(pH=self.pH, m_sample=self.m_sample, m_acid=self.m_acid, sal=self.sal, temp=self.temp, C_acid=self.C_acid) * 1e6
 
+    def measure_CRM(self, crm_alk, salinity, plot_vars=['absorbance', 'residuals', 'dark corrected']):
+        
+        sample_name = 'CRM'
+        self.TA = crm_alk
+        
+        initial_salinity = self.sal
+        self.sal = salinity
+        
+        if self.dark is None:
+            raise ValueError('Dark spectrum not collected. Run collect_dark() first.')
+        if self.scale_factor is None:
+            raise ValueError('Scale factor not calculated. Run collect_scale_factor() first.')
+        
+        if salinity is not None:
+            self.sal = salinity
+        
+        self.collect_spectrum(sample_name=sample_name)
+        self.calc_absorbance()
+        
+        self.calc_pH()
+
+        sample_info = f'{self.timestamp}'
+        pyperclip.copy(sample_info)
+        print(sample_info)
+        
+        input('Copy the timestamp into the spreadsheet (from the clipboard), save the spreadsheet, then press Enter to continue.')
+        
+        weights = self.get_sample_weights(crm=True)
+        
+        self.m_sample = weights['m_sample']
+        self.m_acid = weights['m_acid']
+        
+        self.C_acid = calc_acid_strength(crm_alk=crm_alk, pH=self.pH, m0=self.m_sample, m=self.m_acid, sal=self.sal, temp=self.temp)
+        
+        print(f'Calibrated acid strength: {self.C_acid} (copied to clipboard)')
+        
+        acid_strength = f'{self.C_acid}'
+        pyperclip.copy(acid_strength)
+        
+        self.save_spectrum()
+        self.save_summary()
+                
+        if self.plotting:
+            self.plot_spectrum(include=plot_vars)
+            
+        self.sal = initial_salinity
+    
     def save_summary(self):
         if not os.path.exists(self.summary_file):
             header = 'datetime,sample,dye,sal,temp,K,F,pH,m_sample,m_acid,C_acid,TA\n'
             with open(self.summary_file, 'w+') as f:
                 f.write(header)
 
-        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.K:.4e},{self.F:.4e},{self.pH:.4f},{self.m_sample:.5f},{self.m_acid:.5f},{self.C_acid:.9f},{self.TA:.2f}\n"
+        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.K:.4e},{self.F:.4e},{self.pH:.4f},{self.m_sample:.5f},{self.m_acid:.5f},{self.C_acid:.12f},{self.TA:.2f}\n"
         
         with open(self.summary_file, 'a') as f:
             f.write(data)
@@ -437,11 +488,11 @@ class TAMeasurementSession(pHMeasurementSession):
         
         self.calc_pH()
 
-        sample_info = f'{self.timestamp}\t{self.sample}'
+        sample_info = f'{self.timestamp}'
         pyperclip.copy(sample_info)
         print(sample_info)
         
-        input('Copy the timestamp and sample name into the spreadsheet (from the clipboard), save the spreadsheet, then press Enter to continue.')
+        input('Copy the timestamp into the spreadsheet (from the clipboard), save the spreadsheet, then press Enter to continue.')
 
         self.calc_TA()
         
