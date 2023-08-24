@@ -75,9 +75,10 @@ class Spectrometer:
     def sample_absent(self):
         self.sample = False
 
-    def newSample(self):
+    def newSample(self, f=None):
         a = np.random.uniform(.3, .4)
-        f = np.random.uniform(0.4, 0.6)
+        if f is None:
+            f = np.random.uniform(0.4, 0.6)
         self.Abs = self.mixture(self.wv, a, a * f)
 
     def read(self):
