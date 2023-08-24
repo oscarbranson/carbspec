@@ -1,1 +1,1 @@
-from .session import MeasurementSession
+from .session import pHMeasurementSession, TAMeasurementSession
