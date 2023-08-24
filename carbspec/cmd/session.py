@@ -215,7 +215,6 @@ class MeasurementSession:
         self.temp = (temp_start + temp_mid + temp_end) / 3
         
         self.timestamp = dt.datetime.now()
-        print(f'{self.timestamp}\t{self.sample}')
         
     def calc_absorbance(self):
         self.absorbance = -1 * np.log10(self.light_sample / self.light_reference)
@@ -237,11 +236,17 @@ class MeasurementSession:
         
         self.calc_pH()
 
+        print(f'{self.timestamp}\t{self.sample}')
+
         self.save_spectrum()
         self.save_summary()
                 
         if self.plotting:
             self.plot_spectrum(include=plot_vars)
+    
+    def calc_TA(self, sample_vol, acid_vol):
+        
+
     
     def save_spectrum(self, filename=None, vars=['wv','dark','light_reference','light_sample','scale_factor','absorbance']):
     
