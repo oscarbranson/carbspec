@@ -12,7 +12,7 @@ def acid_zero(acid_str, crm_alk, pH, m0, m, sal, temp):
     acid_str : float
         The strength of the acid in mol kg-1.
     crm_alk : float
-        The Total Alkalinity of the CRM in mol kg-1.
+        The Total Alkalinity of the CRM in umol kg-1.
     pH : float
         The measured pH of the sample.
     m0 : float
@@ -38,7 +38,7 @@ def calc_acid_strength(crm_alk, pH, m0, m, sal, temp):
     Parameters
     ----------
     crm_alk : float
-        The Total Alkalinity of the CRM in mol kg-1.
+        The Total Alkalinity of the CRM in umol kg-1.
     pH : float
         The measured pH of the sample.
     m0 : float
@@ -56,7 +56,7 @@ def calc_acid_strength(crm_alk, pH, m0, m, sal, temp):
         The strength of the acid in mol kg-1.
     """
     acid_fit = opt.minimize(acid_zero, 0.1, args=(crm_alk, pH, m0, m, sal, temp), method='Nelder-Mead')
-    return acid_fit.x
+    return acid_fit.x[0]
 
 def acid_drift(p, x, crm_alk, pH, m0, m, sal, temp):
     acid_str = np.polyval(p, x)
@@ -71,7 +71,7 @@ def calc_acid_strength_drift(x, crm_alk, pH, m0, m, sal, temp, order=1):
     x : array-like
         The x-axis value for the drift correction. Usually time in plain float format (e.g. decimal minutes).
     crm_alk : float
-        The Total Alkalinity of the CRM in mol kg-1.
+        The Total Alkalinity of the CRM in umol kg-1.
     pH : array-like
         The measured pH of the samples. Must be the same length as `x`.
     m0 : array-like
