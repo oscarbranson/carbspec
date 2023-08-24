@@ -5,8 +5,8 @@ from carbspec.spectro.mixture import make_mix_spectra
 
 import time
 
-mixture = make_mix_spectra('MCP')
-
+mixture = make_mix_spectra('BPB_Cam1')
+ 
 class Spectrometer:
     def __init__(self, **kwargs):
         self.light = False
@@ -16,6 +16,8 @@ class Spectrometer:
         self.bkg = 1800 / 5  # background at 1 ms
         self.noise = 500  # noise at 1ms
 
+        self.mixture = mixture
+        
         self.connected = True
 
         self.integration_time = 10
@@ -75,22 +77,22 @@ class Spectrometer:
 
     def newSample(self):
         a = np.random.uniform(.3, .4)
-        f = np.random.uniform(0, 1)
-        self.Abs = mixture(self.wv, a, a * f)
+        f = np.random.uniform(0.4, 0.6)
+        self.Abs = self.mixture(self.wv, a, a * f)
 
     def read(self):
         time.sleep(self.integration_time / 1000)
         bkg = np.random.normal(self.bkg, self.noise / self.integration_time, self.wv.size)
         if self.light:
-            I0 = self.light_only * self.integration_time + bkg
+            I0 = self.light_only * self.integration_time
             if self.channel == 0:
                 return I0
             elif self.channel == 1:
                 I0 *= self.scale_factor
                 if self.sample:
-                    return I0 / 10**self.Abs
+                    return I0 / 10**self.Abs + bkg
                 else:
-                    return I0
+                    return I0 + bkg
         else:
             return bkg
 
