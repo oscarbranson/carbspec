@@ -170,9 +170,8 @@ class pHMeasurementSession:
     
     def collect_scale_factor(self):
         input('Place the reference material in both cells. Switch the light source on. Press enter to continue.')
-        self.sample = 'setup'
         self.scale_factor = np.ones_like(self.wv)
-        self.collect_spectrum()
+        self.collect_spectrum('setup')
         self.scale_factor = self.light_sample_raw / self.light_reference_raw
         self.spectrum.save(vars=['wv','dark','light_reference', 'light_sample','scale_factor'])
         
