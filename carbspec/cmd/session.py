@@ -94,12 +94,9 @@ class pHMeasurementSession:
             )
     
     def connect_Spectrometer(self):
-        # if self.config['spec_id'] == '':
-        #     spec_id = 
         self.spectrometer = Spectrometer()
         
         self.spectrometer.set_integration_time_ms(self.config.getint('spec_integrationtime'))
-        # self.spectrometer.set_wavelength_range(self.config.getfloat('spec_wvmin'), self.config.getfloat('spec_wvmax'))
                 
         self._wv = self.spectrometer.wv
         self._wv_filter = (self._wv >= self.config.getfloat('spec_wvmin')) & (self._wv <= self.config.getfloat('spec_wvmax'))
@@ -170,10 +167,10 @@ class pHMeasurementSession:
         self.spectrum = Spectrum(self)
         if self.plotting:
             self.spectrum.plot('raw')
-            
     
     def collect_scale_factor(self):
         input('Place the reference material in both cells. Switch the light source on. Press enter to continue.')
+        self.sample = 'setup'
         self.scale_factor = np.ones_like(self.wv)
         self.collect_spectrum()
         self.scale_factor = self.light_sample_raw / self.light_reference_raw
@@ -181,7 +178,6 @@ class pHMeasurementSession:
         
         self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
         
-        self.spectrum = Spectrum(self)
         if self.plotting:
             self.spectrum.plot(['raw', 'scale factor', 'dark corrected'])
     
@@ -195,7 +191,6 @@ class pHMeasurementSession:
             self.spectrometer.reference_cell()  # for dummy
         time.sleep(0.1)
         self.light_reference_raw = self.read_spectrometer()
-        # self.light_reference = self.light_reference_raw - self.dark
         
         temp_mid = self.temp_probe.read()
         time.sleep(0.1)
@@ -206,28 +201,16 @@ class pHMeasurementSession:
         time.sleep(0.1)
         
         self.light_sample_raw = self.read_spectrometer()
-        # self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
         
         temp_end = self.temp_probe.read()
         
-        self.temp = (temp_start + temp_mid + temp_end) / 3
+        self.temp = (temp_start + temp_mid + temp_end) / 3.
         
         self.timestamp = dt.datetime.now().replace(microsecond=0)
 
         self.spectrum = Spectrum(self)
-        # self.spectrum = Spectrum(wv=self.wv, dark=self.dark, light_reference_raw=self.light_reference_raw, light_sample_raw=self.light_sample_raw, scale_factor=self.scale_factor, temp=self.temp, sal=self.sal, sample=self.sample, splines=self.splines, savedir=self.savedir, config=self.config)
                 
         self.data_table.loc[self.timestamp, ['sample', 'sal', 'temp', 'spectra']] = self.sample, self.sal, self.temp, self.spectrum
-        
-        
-    # def calc_absorbance(self):
-    #     self.absorbance = -1 * np.log10(self.light_sample / self.light_reference)
-    
-    # def calc_pH(self):
-    #     self.fit_p = un.correlated_values(*unmix_spectra(self.wv, self.absorbance, self.splines))
-    #     self.F = self.fit_p[1] / self.fit_p[0]
-    #     self.K = K_handler(self.dye, self.temp, self.sal)
-    #     self.pH = pH_from_F(self.F, self.K)
     
     def measure_sample(self, sample_name=None, salinity=None, plot_vars=['absorbance', 'residuals', 'dark corrected']):
         if self.dark is None:
@@ -257,28 +240,13 @@ class pHMeasurementSession:
             with open(self.summary_dat, 'w+') as f:
                 f.write(header)
 
-        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.K:.4e},{self.F:.4e},{self.pH:.4f}\n"
+        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.spectrum.K:.4e},{self.spectrum.F:.4e},{self.spectrum.pH:.4f}\n"
         
         with open(self.summary_dat, 'a') as f:
             f.write(data)
         
         self.data_table.to_pickle(self.summary_pkl)
-        
-    def plot_dark(self):
-
-        include = ['raw']        
-        
-        fig, ax = plt.subplots(len(include), 1, figsize=(5, 0.5 + 1.5 * len(include)), constrained_layout=True)
-
-            
-        ax.plot(self.wv, self.dark, label='dark', color='grey')
-        ax.set_ylabel('raw counts')
-
-        ax.set_xlim(self.config.getfloat('spec_wvmin'), self.config.getfloat('spec_wvmax'))
-        ax.set_xlabel('wavelength (nm)')
-
-        return fig, ax        
-        
+                
 class TAMeasurementSession(pHMeasurementSession):
     def __init__(self, dye='BPB', config_file=None, save=True, plotting=True):
         super().__init__(dye=dye, config_file=config_file, save=save, plotting=plotting)
@@ -326,7 +294,7 @@ class TAMeasurementSession(pHMeasurementSession):
             with open(self.summary_dat, 'w+') as f:
                 f.write(header)
 
-        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.K:.4e},{self.F:.4e},{self.pH:.4f},{self.m_sample:.5f},{self.m_acid:.5f},{self.C_acid:.12f},{self.TA:.2f}\n"
+        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.spectrum.K:.4e},{self.spectrum.F:.4e},{self.spectrum.pH:.4f},{self.spectrum.m_sample:.5f},{self.spectrum.m_acid:.5f},{self.spectrum.C_acid:.12f},{self.spectrum.TA:.2f}\n"
         
         with open(self.summary_dat, 'a') as f:
             f.write(data)
