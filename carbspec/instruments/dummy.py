@@ -5,7 +5,7 @@ from carbspec.spectro.mixture import make_mix_spectra
 
 import time
 
-mixture = make_mix_spectra('BPB_Cam1')
+default_splines = 'MCP_Cam1'
  
 class Spectrometer:
     def __init__(self, **kwargs):
@@ -16,7 +16,7 @@ class Spectrometer:
         self.bkg = 1800 / 5  # background at 1 ms
         self.noise = 500  # noise at 1ms
 
-        self.mixture = mixture
+        self.set_splines(default_splines)
         
         self.connected = True
 
@@ -53,6 +53,9 @@ class Spectrometer:
         self.light_only = np.linspace(11000, 55000, self.wv.size) * (norm.pdf(self.wv, 400, 100) + norm.pdf(self.wv, 600, 300)) * 10
         self.scale_factor = 1.5 - 0.002 * (self.wv - 400)
 
+    def set_splines(self, splines):
+        self.splines = splines
+        self.mixture = make_mix_spectra(splines)
 
     def set_integration_time_ms(self, integration_time):
         self.integration_time = integration_time
