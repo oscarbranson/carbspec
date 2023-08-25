@@ -46,10 +46,7 @@ class pHMeasurementSession:
         
         self.boxcar_width = self.config.getint('spec_boxcarwidth')
         self.splines = self.config.get('splines')
-        
-        self.data_table = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'spectra'])
-        self.data_table.index.name = 'timestamp'
-        
+
         self.connect_Instruments()
         
         self.savedir = self.config['savedir']
@@ -63,6 +60,12 @@ class pHMeasurementSession:
         # Summary File Saving
         self.summary_dat = os.path.join(self.savedir, f"{self.dye}_summary.dat")
         self.summary_pkl = os.path.join(self.savedir, f"{self.dye}_summary.pkl")
+        
+        if os.path.exists(self.summary_pkl):
+            self.data_table = pd.read_pickle(self.summary_pkl)
+        else:
+            self.data_table = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'spectra'])
+            self.data_table.index.name = 'timestamp'
 
         print('  --> Ready!')
 
