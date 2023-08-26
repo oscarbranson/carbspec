@@ -74,11 +74,12 @@ class Spectrum:
 
         header = [
             f'# timestamp: {self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}',
+            f'# sample: {self.sample}',
+            f'# temp: {self.temp:.3f}',
+            f'# sal: {self.sal:.2f}',
             f'# config_file: {self.config_file}',
             f'# dye: {self.dye}',
             f'# splines: {self.splines}'
-            f'# temp: {self.temp:.3f}',
-            f'# sal: {self.sal:.2f}',
         ]
         
         header = '\n'.join(header + [','.join(vars)])
@@ -86,23 +87,25 @@ class Spectrum:
         np.savetxt(file, out, delimiter=',', header=header, comments='')
     
     @staticmethod
-    def from_dat(file):
+    def from_csv(file):
         # read header
         with open(file, 'r') as f:
             timestamp = f.readline()
+            sample = f.readline()
+            temp = f.readline()
+            sal = f.readline()
             config_file = f.readline()
             dye = f.readline()
             splines = f.readline()
-            temp = f.readline()
-            sal = f.readline()
         
         # parse header
         timestamp = pd.to_datetime(timestamp.split(': ')[-1].strip())
+        sample = sample.split(': ')[-1].strip()
+        temp = float(temp.split(': ')[-1].strip())
+        sal = float(sal.split(': ')[-1].strip())
         config_file = config_file.split(': ')[-1].strip()
         dye = dye.split(': ')[-1].strip()
         splines = splines.split(': ')[-1].strip()
-        temp = float(temp.split(': ')[-1].strip())
-        sal = float(sal.split(': ')[-1].strip())
         
         # read data
         dat = pd.read_csv(file, comment='#')
@@ -116,11 +119,14 @@ class Spectrum:
             light_sample_raw = dat.light_sample_raw
         
         
-        return Spectrum(timestamp=timestamp, wv=dat['wv'], config_file=config_file, dark=dat['dark'], scale_factor=dat['scale_factor'], light_sample_raw=light_sample_raw, light_reference_raw=light_reference_raw, temp=temp, sal=sal, dye=dye, splines=splines)
+        return Spectrum(timestamp=timestamp, sample=sample, wv=dat['wv'], config_file=config_file, dark=dat['dark'], scale_factor=dat['scale_factor'], light_sample_raw=light_sample_raw, light_reference_raw=light_reference_raw, temp=temp, sal=sal, dye=dye, splines=splines)
     
     def save(self, dat_file, pkl_file):
         self.to_dat(dat_file)
         self.to_pickle(pkl_file)
+    
+    def __repr__(self):
+        return f'Spectrum from sample {self.sample} at {self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
     
 def calc_pH(spectrum):
     """Calculate pH from a spectrum
