@@ -11,7 +11,7 @@ def TA_from_pH(pH, m_sample, m_acid, sal, temp, C_acid, C_dye=0):
     Parameters
     ----------
     pH : array_like
-        End-point pH of acid addition to seawater.
+        End-point pH of acid addition to seawater on the Total scale.
     m_sample : array_like
         Mass of sample.
     m_acid : array_like
