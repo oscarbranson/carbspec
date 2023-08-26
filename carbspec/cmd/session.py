@@ -6,9 +6,6 @@ from configparser import ConfigParser
 import pkg_resources as pkgrs
 import time
 import pyperclip
-import matplotlib.pyplot as plt
-import uncertainties as un
-import uncertainties.unumpy as unp
 
 try:
     from carbspec.instruments import BeamSwitch, Spectrometer, TempProbe
@@ -18,8 +15,9 @@ except:
     from carbspec.instruments.dummy import BeamSwitch, Spectrometer, TempProbe
     dummy = True
 
-from carbspec.spectro.spectrum import Spectrum
-from carbspec.alkalinity import calc_acid_strength
+from carbspec.spectro.spectrum import Spectrum, calc_pH
+from carbspec.alkalinity import calc_acid_strength, TA_from_pH
+from .plot import plot_spectrum
 
 class pHMeasurementSession:
     def __init__(self, dye='MCP', config_file=None, save=True, plotting=True):
@@ -56,6 +54,10 @@ class pHMeasurementSession:
         self.save = save
         if self.save:
             print(f'Saving data to {self.savedir}')
+        self._rawdir = os.path.join(self.savedir, 'raw')
+        os.makedirs(self._rawdir, exist_ok=True)
+        self._pkldir = os.path.join(self.savedir, 'pkl')
+        os.makedirs(self._pkldir, exist_ok=True)
         
         # Summary File Saving
         self.summary_dat = os.path.join(self.savedir, f"{self.dye}_summary.dat")
@@ -64,7 +66,13 @@ class pHMeasurementSession:
         if os.path.exists(self.summary_pkl):
             self.data_table = pd.read_pickle(self.summary_pkl)
         else:
-            self.data_table = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'spectra'])
+            dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'spectra', 'dat_file', 'pkl_file'])
+            dat = dat.astype({
+                'temp': float, 
+                'sal': float, 
+                'K': float, 
+            })
+            self.data_table = dat
             self.data_table.index.name = 'timestamp'
 
         print('  --> Ready!')
@@ -167,22 +175,37 @@ class pHMeasurementSession:
     def collect_dark(self):
         input('Ensure the light is off and the reference cell is in the beam path. Press enter to continue.')
         self.dark = self.read_spectrometer()
-        self.spectrum = Spectrum(self)
+        self.spectrum = Spectrum(
+            sample='dark', timestamp=self.timestamp, temp=self.temp, sal=self.sal, dye=self.dye, splines=self.splines, config_file=self.config_file,
+            wv=self.wv, dark=self.dark)        
         if self.plotting:
-            self.spectrum.plot('raw')
+            plot_spectrum(self.spectrum, include=['raw'])
     
     def collect_scale_factor(self):
         input('Place the reference material in both cells. Switch the light source on. Press enter to continue.')
         self.scale_factor = np.ones_like(self.wv)
         self.collect_spectrum('setup')
-        self.scale_factor = self.light_sample_raw / self.light_reference_raw
-        self.spectrum.save(vars=['wv','dark','light_reference', 'light_sample','scale_factor'])
         
-        self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
+        self.scale_factor = self.spectrum.light_sample_raw / self.spectrum.light_reference_raw
+        
+        self.spectrum.scale_factor = self.scale_factor
+        self.spectrum.correct_channels()
+
+        self.save_spectrum()
         
         if self.plotting:
-            self.spectrum.plot(['raw', 'scale factor', 'dark corrected'])
+            plot_spectrum(self.spectrum, include=['raw', 'scale factor', 'dark corrected'])
     
+    def make_filenames(self):
+        self.filename = f"{self.dye}_{self.timestamp.strftime('%Y%m%d_%H%M%S')}"
+        if self.sample is not None:
+            self.filename = self.filename + f'_{self.sample}'
+        self._pkl_outfile = os.path.join(self.savedir, 'pkl', self.filename + '.pkl')
+        self._dat_outfile = os.path.join(self.savedir, 'raw', self.filename + '.csv')
+    
+    def save_spectrum(self):
+        self.spectrum.save(dat_file=self._dat_outfile, pkl_file=self._pkl_outfile)
+
     def collect_spectrum(self, sample_name=None):
         self.sample = sample_name
         
@@ -192,7 +215,7 @@ class pHMeasurementSession:
         if dummy:
             self.spectrometer.reference_cell()  # for dummy
         time.sleep(0.1)
-        self.light_reference_raw = self.read_spectrometer()
+        light_reference_raw = self.read_spectrometer()
         
         temp_mid = self.temp_probe.read()
         time.sleep(0.1)
@@ -202,7 +225,8 @@ class pHMeasurementSession:
             self.spectrometer.sample_cell()  # for dummy
         time.sleep(0.1)
         
-        self.light_sample_raw = self.read_spectrometer()
+        # self.light_sample_raw = self.read_spectrometer()
+        light_sample_raw = self.read_spectrometer()
         
         temp_end = self.temp_probe.read()
         
@@ -210,9 +234,13 @@ class pHMeasurementSession:
         
         self.timestamp = dt.datetime.now().replace(microsecond=0)
 
-        self.spectrum = Spectrum(self)
-                
-        self.data_table.loc[self.timestamp, ['sample', 'sal', 'temp', 'spectra']] = self.sample, self.sal, self.temp, self.spectrum
+        self.make_filenames()
+        
+        self.spectrum = Spectrum(
+            sample=self.sample, timestamp=self.timestamp, temp=self.temp, sal=self.sal, dye=self.dye, splines=self.splines, config_file=self.config_file,
+            wv=self.wv, dark=self.dark, scale_factor=self.scale_factor, light_sample_raw=light_sample_raw, light_reference_raw=light_reference_raw)
+        
+        self.data_table.loc[self.timestamp, ['sample', 'sal', 'temp', 'spectra', 'dat_file', 'pkl_file']] = self.sample, self.sal, self.temp, self.spectrum, self._dat_outfile, self._pkl_outfile
     
     def measure_sample(self, sample_name=None, salinity=None, plot_vars=['absorbance', 'residuals', 'dark corrected']):
         if self.dark is None:
@@ -224,28 +252,38 @@ class pHMeasurementSession:
             self.sal = salinity
             
         self.collect_spectrum(sample_name=sample_name)
-        self.spectrum.calc_absorbance()
+        # self.spectrum.calc_absorbance()
         
-        self.spectrum.calc_pH()
-        
-        self.data_table.loc[self.timestamp, ['F', 'K', 'pH']] = self.spectrum.F, self.spectrum.K, self.spectrum.pH
+        F, K, pH, fit_p = calc_pH(self.spectrum)
+                
+        self.data_table.loc[self.timestamp, ['F', 'K', 'pH']] = F, K, pH
 
-        self.spectrum.save()
+        self.save_spectrum()
         self.save_summary()
                 
         if self.plotting:
-            self.spectrum.plot(include=plot_vars)
+            plot_spectrum(self.spectrum, fit_p, include=plot_vars)
             
     def save_summary(self):
+        exclude = ['spectra']
+        cols = [c for c in self.data_table.columns if c not in exclude]
+
         if not os.path.exists(self.summary_dat):
-            header = 'datetime,sample,dye,sal,temp,K,F,pH\n'
+            header = ','.join(cols) + '\n'
             with open(self.summary_dat, 'w+') as f:
                 f.write(header)
-
-        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.spectrum.K:.4e},{self.spectrum.F:.4e},{self.spectrum.pH:.4f}\n"
         
-        with open(self.summary_dat, 'a') as f:
-            f.write(data)
+        self.data_table.loc[self.timestamp, cols].to_csv(self.summary_dat, header=False, index=False, mode='a')
+        
+        # if not os.path.exists(self.summary_dat):
+        #     header = 'datetime,sample,dye,sal,temp,K,F,pH\n'
+        #     with open(self.summary_dat, 'w+') as f:
+        #         f.write(header)
+
+        # data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.spectrum.K:.4e},{self.spectrum.F:.4e},{self.spectrum.pH:.4f}\n"
+        
+        # with open(self.summary_dat, 'a') as f:
+        #     f.write(data)
         
         self.data_table.to_pickle(self.summary_pkl)
                 
@@ -255,7 +293,16 @@ class TAMeasurementSession(pHMeasurementSession):
         
         self.sample_weight_spreadsheet = self.config.get('sample_weight_spreadsheet')
         
-        self.data_table = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'm_sample', 'm_acid', 'C_acid', 'TA', 'spectra'])
+        dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'm_sample', 'm_acid', 'C_acid', 'TA', 'spectra', 'dat_file', 'pkl_file'])
+        dat = dat.astype({
+                'temp': float, 
+                'sal': float, 
+                'K': float, 
+                'm_sample': float, 
+                'm_acid': float, 
+                'C_acid': float,
+            })
+        self.data_table = dat
         self.data_table.index.name = 'timestamp'
     
     def get_sample_weights(self, crm=False, all=False):
@@ -290,25 +337,25 @@ class TAMeasurementSession(pHMeasurementSession):
             
             return weights
 
-    def save_summary(self):
-        if not os.path.exists(self.summary_dat):
-            header = 'datetime,sample,dye,sal,temp,K,F,pH,m_sample,m_acid,C_acid,TA\n'
-            with open(self.summary_dat, 'w+') as f:
-                f.write(header)
+    # def save_summary(self):
+    #     if not os.path.exists(self.summary_dat):
+    #         header = 'datetime,sample,sal,temp,K,F,pH,m_sample,m_acid,C_acid,TA\n'
+    #         with open(self.summary_dat, 'w+') as f:
+    #             f.write(header)
 
-        data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.spectrum.K:.4e},{self.spectrum.F:.4e},{self.spectrum.pH:.4f},{self.spectrum.m_sample:.5f},{self.spectrum.m_acid:.5f},{self.spectrum.C_acid:.12f},{self.spectrum.TA:.2f}\n"
+    #     cols = ['sample', 'sal', 'temp', 'K', 'F', 'pH', 'm_sample', 'm_acid', 'C_acid', 'TA']
         
-        with open(self.summary_dat, 'a') as f:
-            f.write(data)
+    #     data = f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')},{self.sample},{self.dye},{self.sal:.2f}, {self.temp:.2f},{self.spectrum.K:.4e},{self.spectrum.F:.4e},{self.spectrum.pH:.4f},{self.spectrum.m_sample:.5f},{self.spectrum.m_acid:.5f},{self.spectrum.C_acid:.12f},{self.spectrum.TA:.2f}\n"
+        
+    #     with open(self.summary_dat, 'a') as f:
+    #         f.write(data)
             
-        self.data_table.to_pickle(self.summary_pkl)
+    #     self.data_table.to_pickle(self.summary_pkl)
     
     def measure_CRM(self, crm_alk, salinity, plot_vars=['absorbance', 'residuals', 'dark corrected']):
         
         sample_name = 'CRM'
-        self.TA = crm_alk
         
-        initial_salinity = self.sal
         self.sal = salinity
         
         if self.dark is None:
@@ -320,11 +367,10 @@ class TAMeasurementSession(pHMeasurementSession):
             self.sal = salinity
         
         self.collect_spectrum(sample_name=sample_name)
-        
-        self.spectrum.calc_absorbance()
-        self.spectrum.calc_pH()
+                
+        F, K, pH, fit_p = calc_pH(self.spectrum)
 
-        self.data_table.loc[self.timestamp, ['F', 'K', 'pH']] = [self.spectrum.F, self.spectrum.K, self.spectrum.pH]
+        self.data_table.loc[self.timestamp, ['F', 'K', 'pH']] = F, K, pH
 
         sample_info = f'{self.timestamp}'
         pyperclip.copy(sample_info)
@@ -334,25 +380,24 @@ class TAMeasurementSession(pHMeasurementSession):
         
         weights = self.get_sample_weights(crm=True)
         
-        self.spectrum.TA = crm_alk
-        self.spectrum.m_sample = weights['m_sample']
-        self.spectrum.m_acid = weights['m_acid']
+        m_sample = weights['m_sample']
+        m_acid = weights['m_acid']
         
-        self.spectrum.C_acid = calc_acid_strength(crm_alk=crm_alk, pH=self.spectrum.pH, m0=self.spectrum.m_sample, m=self.spectrum.m_acid, sal=self.spectrum.sal, temp=self.spectrum.temp)
+        C_acid = calc_acid_strength(crm_alk=crm_alk, pH=pH, m0=m_sample, m=m_acid, sal=self.spectrum.sal, temp=self.spectrum.temp)
         
-        self.data_table.loc[self.timestamp, ['m_sample', 'm_acid', 'C_acid', 'TA']] = [self.spectrum.m_sample, self.spectrum.m_acid, self.spectrum.C_acid, self.spectrum.TA]
+        self.data_table.loc[self.timestamp, ['m_sample', 'm_acid', 'C_acid', 'TA']] = [m_sample, m_acid, C_acid, crm_alk]
         
-        print(f'Calibrated acid strength: {self.C_acid} (copied to clipboard)')
-        acid_strength = f'{self.C_acid}'
+        print(f'Calibrated acid strength: {C_acid} (copied to clipboard)')
+        acid_strength = f'{C_acid}'
         pyperclip.copy(acid_strength)
         
-        self.spectrum.save()
+        self.save_spectrum()
         self.save_summary()
                 
         if self.plotting:
-            self.spectrum.plot(include=plot_vars)
+            plot_spectrum(self.spectrum, fit_p, include=plot_vars)
             
-        self.sal = initial_salinity
+        self.sal = self.config.getfloat('salinity')
             
     def measure_sample(self, sample_name=None, salinity=None, plot_vars=['absorbance', 'residuals', 'dark corrected']):
         
@@ -365,10 +410,10 @@ class TAMeasurementSession(pHMeasurementSession):
             self.sal = salinity
         
         self.collect_spectrum(sample_name=sample_name)
-        self.spectrum.calc_absorbance()
         
-        self.spectrum.calc_pH()
-        self.data_table.loc[self.timestamp, ['F', 'K', 'pH']] = [self.spectrum.F, self.spectrum.K, self.spectrum.pH]
+        F, K, pH, fit_p = calc_pH(self.spectrum)
+
+        self.data_table.loc[self.timestamp, ['F', 'K', 'pH']] = [F, K, pH]
 
         sample_info = f'{self.timestamp}'
         pyperclip.copy(sample_info)
@@ -377,12 +422,12 @@ class TAMeasurementSession(pHMeasurementSession):
         input('Copy the timestamp into the spreadsheet (from the clipboard), save the spreadsheet, then press Enter to continue.')
 
         weights = self.get_sample_weights()
-        self.spectrum.calc_TA(m_sample=weights['m_sample'], m_acid=weights['m_acid'], C_acid=weights['C_acid'])
+        TA = TA_from_pH(pH=pH, m_sample=weights['m_sample'], m_acid=weights['m_acid'], C_acid=weights['C_acid'], sal=self.spectrum.sal, temp=self.spectrum.temp) * 1e6
+                
+        self.data_table.loc[self.timestamp, ['m_sample', 'm_acid', 'C_acid', 'TA']] = weights['m_sample'], weights['m_acid'], weights['C_acid'], TA
         
-        self.data_table.loc[self.timestamp, ['m_sample', 'm_acid', 'C_acid', 'TA']] = [self.spectrum.m_sample, self.spectrum.m_acid, self.spectrum.C_acid, self.spectrum.TA]
-        
-        self.spectrum.save()
+        self.save_spectrum()
         self.save_summary()
                 
         if self.plotting:
-            self.spectrum.plot(include=plot_vars)
+            plot_spectrum(self.spectrum, fit_p, include=plot_vars)
