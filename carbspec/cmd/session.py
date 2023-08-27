@@ -65,22 +65,27 @@ class pHMeasurementSession:
         
         if os.path.exists(self.summary_pkl):
             self.load_data_table(self.summary_pkl)
+            self._new_data_table = False
         elif os.path.exists(self.summary_dat):
             self.load_data_table(self.summary_dat)
+            self._new_data_table = False
         else:
-            dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'spectra', 'dat_file', 'pkl_file'])
-            dat = dat.astype({
-                'temp': float, 
-                'sal': float, 
-                'K': float, 
-            })
-            self.data_table = dat
-            self.data_table.index.name = 'timestamp'
-
+            self.make_data_table()
+            self._new_data_table = True
+            
         print('  --> Ready!')
 
+    def make_data_table(self):
+        dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'spectra', 'dat_file', 'pkl_file'])
+        dat = dat.astype({
+            'temp': float, 
+            'sal': float, 
+            'K': float, 
+        })
+        dat.index.name = 'timestamp'
+        self.data_table = dat
+        
     def load_data_table(self, file):
-        print(f'loading existing data table from {file}...')
         if '.pkl' in file:
             self.data_table = pd.read_pickle(file)
         elif '.dat' in file:
@@ -91,6 +96,8 @@ class pHMeasurementSession:
             self.data_table = dat
         else:
             ValueError('File must be a .dat or .pkl file.')
+
+        print(f'Loaded existing data table from {file}')
             
     def readConfig(self):
         self._config = ConfigParser()
@@ -308,23 +315,23 @@ class TAMeasurementSession(pHMeasurementSession):
         
         self.sample_weight_spreadsheet = self.config.get('sample_weight_spreadsheet')
         
-        if os.path.exists(self.summary_pkl):
-            self.load_data_table(self.summary_pkl)
-        elif os.path.exists(self.summary_dat):
-            self.load_data_table(self.summary_dat)
-        else:
-            dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'm_sample', 'm_acid', 'C_acid', 'TA', 'spectra', 'dat_file', 'pkl_file'])
-            dat = dat.astype({
-                    'temp': float, 
-                    'sal': float, 
-                    'K': float, 
-                    'm_sample': float, 
-                    'm_acid': float, 
-                    'C_acid': float,
-                })
-            self.data_table = dat
-            self.data_table.index.name = 'timestamp'
-    
+        if self._new_data_table:
+            self.make_data_table()
+
+    def make_data_table(self):
+        dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'm_sample', 'm_acid', 'C_acid', 'TA', 'spectra', 'dat_file', 'pkl_file'])
+        dat = dat.astype({
+                'temp': float, 
+                'sal': float, 
+                'K': float, 
+                'm_sample': float, 
+                'm_acid': float, 
+                'C_acid': float,
+            })
+        dat.index.name = 'timestamp'
+        
+        self.data_table = dat
+        
     def get_sample_weights(self, crm=False, all=False):
         valid_input = False
         while not valid_input:
