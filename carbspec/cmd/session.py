@@ -64,7 +64,9 @@ class pHMeasurementSession:
         self.summary_pkl = os.path.join(self.savedir, f"{self.dye}_summary.pkl")
         
         if os.path.exists(self.summary_pkl):
-            self.data_table = pd.read_pickle(self.summary_pkl)
+            self.load_data_table(self.summary_pkl)
+        elif os.path.exists(self.summary_dat):
+            self.load_data_table(self.summary_dat)
         else:
             dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'spectra', 'dat_file', 'pkl_file'])
             dat = dat.astype({
@@ -77,6 +79,19 @@ class pHMeasurementSession:
 
         print('  --> Ready!')
 
+    def load_data_table(self, file):
+        print(f'loading existing data table from {file}...')
+        if '.pkl' in file:
+            self.data_table = pd.read_pickle(file)
+        elif '.dat' in file:
+            dat = pd.read_csv(file, parse_dates=['timestamp'])
+            dat.set_index('timestamp', inplace=True)
+            for i, r in dat.iterrows():
+                dat.loc[i, 'spectra'] = Spectrum.load(r['pkl_file'])
+            self.data_table = dat
+        else:
+            ValueError('File must be a .dat or .pkl file.')
+            
     def readConfig(self):
         self._config = ConfigParser()
         self._config.read(self.config_file)
@@ -273,7 +288,7 @@ class pHMeasurementSession:
             with open(self.summary_dat, 'w+') as f:
                 f.write(header)
         
-        self.data_table.loc[self.timestamp, cols].to_csv(self.summary_dat, header=False, index=False, mode='a')
+        self.data_table.loc[[self.timestamp], cols].to_csv(self.summary_dat, header=False, index=False, mode='a')
         
         # if not os.path.exists(self.summary_dat):
         #     header = 'datetime,sample,dye,sal,temp,K,F,pH\n'
@@ -293,17 +308,22 @@ class TAMeasurementSession(pHMeasurementSession):
         
         self.sample_weight_spreadsheet = self.config.get('sample_weight_spreadsheet')
         
-        dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'm_sample', 'm_acid', 'C_acid', 'TA', 'spectra', 'dat_file', 'pkl_file'])
-        dat = dat.astype({
-                'temp': float, 
-                'sal': float, 
-                'K': float, 
-                'm_sample': float, 
-                'm_acid': float, 
-                'C_acid': float,
-            })
-        self.data_table = dat
-        self.data_table.index.name = 'timestamp'
+        if os.path.exists(self.summary_pkl):
+            self.load_data_table(self.summary_pkl)
+        elif os.path.exists(self.summary_dat):
+            self.load_data_table(self.summary_dat)
+        else:
+            dat = pd.DataFrame(index=None, columns=['sample', 'temp', 'sal', 'F', 'K', 'pH', 'm_sample', 'm_acid', 'C_acid', 'TA', 'spectra', 'dat_file', 'pkl_file'])
+            dat = dat.astype({
+                    'temp': float, 
+                    'sal': float, 
+                    'K': float, 
+                    'm_sample': float, 
+                    'm_acid': float, 
+                    'C_acid': float,
+                })
+            self.data_table = dat
+            self.data_table.index.name = 'timestamp'
     
     def get_sample_weights(self, crm=False, all=False):
         valid_input = False
