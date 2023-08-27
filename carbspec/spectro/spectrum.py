@@ -43,8 +43,7 @@ class Spectrum:
     
     def correct_channels(self):
         self.light_reference = self.light_reference_raw - self.dark
-        self.light_sample = (self.light_sample_raw - self.dark) / self.scale_factor
-        # self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
+        self.light_sample = self.light_sample_raw / self.scale_factor - self.dark
     
     def calc_absorbance(self):
         self.absorbance = -1 * np.log10(self.light_sample / self.light_reference)
@@ -124,6 +123,15 @@ class Spectrum:
     def save(self, dat_file, pkl_file):
         self.to_dat(dat_file)
         self.to_pickle(pkl_file)
+    
+    @staticmethod
+    def load(file):
+        if 'pkl' in file:
+            return Spectrum.from_pickle(file)
+        elif 'csv' in file:
+            return Spectrum.from_csv(file)
+        else:
+            raise ValueError('File must be a .csv or .pkl file.')
     
     def __repr__(self):
         return f'Spectrum from sample {self.sample} at {self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
