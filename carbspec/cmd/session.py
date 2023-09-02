@@ -20,14 +20,17 @@ from carbspec.alkalinity import calc_acid_strength, TA_from_pH
 from .plot import plot_spectrum
 
 class pHMeasurementSession:
-    def __init__(self, dye='MCP', config_file=None, save=True, plotting=True):
-
+    def __init__(self, dye='MCP', config_file=None, save=True, plotting=True, last_analysis=None):
+        
         self.dye = dye
         
         if config_file is None:
             config_file = pkgrs.resource_filename('carbspec', '/cmd/resources/carbspec.cfg')
         self.config_file = config_file
         self.readConfig()
+        
+        print('Starting Measurement Session')
+        print(f'  > Config file: {self.config_file}')
         
         self.plotting = plotting
         
@@ -44,8 +47,6 @@ class pHMeasurementSession:
         
         self.boxcar_width = self.config.getint('spec_boxcarwidth')
         self.splines = self.config.get('splines')
-
-        self.connect_Instruments()
         
         self.savedir = self.config['savedir']
         os.makedirs(self.savedir, exist_ok=True)
@@ -53,7 +54,7 @@ class pHMeasurementSession:
         # Spectra Saving
         self.save = save
         if self.save:
-            print(f'Saving data to {self.savedir}')
+            print(f'  > Saving data to {self.savedir}')
         self._rawdir = os.path.join(self.savedir, 'raw')
         os.makedirs(self._rawdir, exist_ok=True)
         self._pkldir = os.path.join(self.savedir, 'pkl')
@@ -72,7 +73,15 @@ class pHMeasurementSession:
         else:
             self.make_data_table()
             self._new_data_table = True
-            
+        
+        # load last dark and scale_factor, if given
+        self.last_analysis = last_analysis
+        if self.last_analysis is not None:
+            self.load_last_dark_and_scale_factor()        
+
+        # Connect to instruments
+        self.connect_Instruments()
+
         print('  --> Ready!')
 
     def make_data_table(self):
@@ -97,7 +106,7 @@ class pHMeasurementSession:
         else:
             ValueError('File must be a .dat or .pkl file.')
 
-        print(f'Loaded existing data table from {file}')
+        print(f'  > Loaded existing data table from {file}')
             
     def readConfig(self):
         self._config = ConfigParser()
@@ -195,6 +204,12 @@ class pHMeasurementSession:
         return spec[self._wv_filter]
 
     def collect_dark(self):
+        if self.dark is not None:
+            response = input('You have already collected a Dark spectrum. Do you want to collect a new one? Y/[N]:')
+            
+            if response.upper() != 'Y':
+                return
+
         input('Ensure the light is off and the reference cell is in the beam path. Press enter to continue.')
         self.dark = self.read_spectrometer()
         self.spectrum = Spectrum(
@@ -204,6 +219,12 @@ class pHMeasurementSession:
             plot_spectrum(self.spectrum, include=['raw'])
     
     def collect_scale_factor(self):
+        if self.scale_factor is not None:
+            response = input('You have already collected a Scale Factor spectrum. Do you want to collect a new one? Y/[N]:')
+            
+            if response.upper() != 'Y':
+                return
+        
         input('Place the reference material in both cells. Switch the light source on. Press enter to continue.')
         self.scale_factor = np.ones_like(self.wv)
         self.collect_spectrum('setup')
@@ -217,6 +238,14 @@ class pHMeasurementSession:
         
         if self.plotting:
             plot_spectrum(self.spectrum, include=['raw', 'scale factor', 'dark corrected'])
+        
+    def load_last_dark_and_scale_factor(self):
+        s = Spectrum.load(self.last_analysis)
+        
+        self.dark = s.dark
+        self.scale_factor = s.scale_factor
+        
+        print(f'  > Loaded Dark and Scale Factor from last analysis ({self.last_analysis}).')
     
     def make_filenames(self):
         self.filename = f"{self.dye}_{self.timestamp.strftime('%Y%m%d_%H%M%S')}"
@@ -282,6 +311,9 @@ class pHMeasurementSession:
 
         self.save_spectrum()
         self.save_summary()
+        
+        print(sample_name)
+        print(f'  > pH: {pH:.4f}')
                 
         if self.plotting:
             plot_spectrum(self.spectrum, fit_p, include=plot_vars)
@@ -310,10 +342,12 @@ class pHMeasurementSession:
         self.data_table.to_pickle(self.summary_pkl)
                 
 class TAMeasurementSession(pHMeasurementSession):
-    def __init__(self, dye='BPB', config_file=None, save=True, plotting=True):
-        super().__init__(dye=dye, config_file=config_file, save=save, plotting=plotting)
+    def __init__(self, dye='BPB', config_file=None, save=True, plotting=True, last_analysis=None):
+        super().__init__(dye=dye, config_file=config_file, save=save, plotting=plotting, last_analysis=last_analysis)
         
         self.sample_weight_spreadsheet = self.config.get('sample_weight_spreadsheet')
+        
+        print(f'  > Sample weight spreadsheet: {self.sample_weight_spreadsheet}')
         
         if self._new_data_table:
             self.make_data_table()
@@ -421,6 +455,8 @@ class TAMeasurementSession(pHMeasurementSession):
         self.save_spectrum()
         self.save_summary()
                 
+        print(f'  > Acid Strength: {acid_strength:8f} M')
+        
         if self.plotting:
             plot_spectrum(self.spectrum, fit_p, include=plot_vars)
             
@@ -455,6 +491,10 @@ class TAMeasurementSession(pHMeasurementSession):
         
         self.save_spectrum()
         self.save_summary()
+        
+        print(sample_name)
+        print(f'  > pH: {pH:.4f}')
+        print(f'  > TA: {TA:.2f} µmol/kg')
                 
         if self.plotting:
             plot_spectrum(self.spectrum, fit_p, include=plot_vars)
