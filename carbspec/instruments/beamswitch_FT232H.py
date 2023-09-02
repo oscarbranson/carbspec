@@ -29,11 +29,11 @@ class BeamSwitch(Instrument):
         self.reference_cell()
         
         self.connected = True
-        print(f'Connected to {self.instrument_info}')
+        print(f'  > Connected to {self.instrument_info}')
         
     def disconnect(self):
         self.connected = False
-        print(f'Disconnected from {self.instrument_info}')
+        print(f'  > Disconnected from {self.instrument_info}')
     
     def toggle_cells(self):
         self.switch.value = not self.switch.value

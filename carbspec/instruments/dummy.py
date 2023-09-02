@@ -34,7 +34,7 @@ class Spectrometer:
 
         self.newSample()
         # self.close = self.disconnect
-        print('Connected to dummy Spectrometer')
+        print('  > Connected to dummy Spectrometer')
 
     def set_wavelength_range(self, wvMin: int | float = None, wvMax: int | float = None):
         if wvMin is not None:
@@ -104,7 +104,7 @@ class TempProbe:
     def __init__(self, **kwargs):
         self.lastTemp = self.read()
         self.connected = True
-        print('Connected to dummy TempProbe')
+        print('  > Connected to dummy TempProbe')
 
     def read(self):
         return np.random.normal(25, 2)
@@ -117,7 +117,7 @@ class BeamSwitch:
         self.reference_cell = self.channel_0
         self.sample_cell = self.channel_1
         
-        print('Connected to dummy BeamSwitch')
+        print('  > Connected to dummy BeamSwitch')
     
     def switch(self):
         if self.channel == 0:

@@ -15,13 +15,13 @@ class BeamSwitch(Instrument):
     def connect(self):
         self.switch = PWMOutputDevice(pin=self.pin, frequency=5)
         self.connected = True
-        print(f'Connected to {self.instrument_info}')
+        print(f'  > Connected to {self.instrument_info}')
 
 
     def disconnect(self):
         self.switch.close()
         self.connected = False
-        print(f'Disconnected from {self.instrument_info}')
+        print(f'  > Disconnected from {self.instrument_info}')
 
     def toggle_cells(self):
         self.switch.value = not self.switch.value

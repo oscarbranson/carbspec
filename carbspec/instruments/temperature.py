@@ -45,13 +45,13 @@ class TempProbe(Instrument):
         
         self.connected = True
 
-        print(f'Connected to {self.instrument_info}')
+        print(f'  > Connected to {self.instrument_info}')
 
     def disconnect(self):
         self.sensor.serial.close()
         self.connected = False
 
-        print(f'Disconnected from {self.instrument_info}')
+        print(f'  > Disconnected from {self.instrument_info}')
 
     def read(self):
         """

@@ -25,7 +25,7 @@ class Spectrometer(sbSpectrometer):
         
         self.update_wv()
         
-        print(f'Connected to {self.model} Spectrometer (S/N {self.serial_number}) using `seabreeze`')
+        print(f'  > Connected to {self.model} Spectrometer (S/N {self.serial_number}) using `seabreeze`')
             
     @classmethod
     def from_serial_number(cls, serial: str | None = None):
