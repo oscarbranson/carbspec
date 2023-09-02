@@ -59,6 +59,8 @@ class pHMeasurementSession:
         os.makedirs(self._rawdir, exist_ok=True)
         self._pkldir = os.path.join(self.savedir, 'pkl')
         os.makedirs(self._pkldir, exist_ok=True)
+        self._pkl_outfile = None
+        self._dat_outfile = None
         
         # Summary File Saving
         self.summary_dat = os.path.join(self.savedir, f"{self.dye}_summary.dat")
@@ -149,6 +151,11 @@ class pHMeasurementSession:
         self.connect_TempProbe()
         self.connect_BeamSwitch()
         self.connect_Spectrometer()
+        
+    def disconnect_Instruments(self):
+        for instrument in [self.spectrometer, self.beam_switch, self.temp_probe]:
+            if hasattr(instrument, 'disconnect'):
+                instrument.disconnect()
             
     def find_max_integration_time(self, maintain_total_collection_time=True):
         
@@ -340,7 +347,13 @@ class pHMeasurementSession:
         #     f.write(data)
         
         self.data_table.to_pickle(self.summary_pkl)
-                
+    
+    def end_session(self):
+        self.disconnect_Instruments()
+        if self._pkl_outfile is not None:
+            print(f'  > Last analysis: {self.self._pkl_outfile}')
+        print('Ready to end session. Please now run `exit` to close the session.')
+
 class TAMeasurementSession(pHMeasurementSession):
     def __init__(self, dye='BPB', config_file=None, save=True, plotting=True, last_analysis=None):
         super().__init__(dye=dye, config_file=config_file, save=save, plotting=plotting, last_analysis=last_analysis)

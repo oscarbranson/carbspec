@@ -58,6 +58,7 @@ class Spectrometer(sbSpectrometer):
         
     def disconnect(self):
         self.close()
+        print(f'  > Disconnected from {self.model} Spectrometer (S/N {self.serial_number})')
 
     def set_integration_time_ms(self, integration_time_ms: int):
         self.integration_time_micros(integration_time_ms * 1e3)
