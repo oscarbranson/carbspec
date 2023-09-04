@@ -122,8 +122,9 @@ class pHMeasurementSession:
     def updateConfig(self, parameter, value, section=None):
         if section is None:
             section = self.dye
-        if parameter in self._config['DEFAULT']:
+        if parameter in self._config[section]:
             self._config.set(section, parameter, str(value))
+        self.writeConfig()
             
     def connect_TempProbe(self):
         self.temp_probe = TempProbe(
@@ -196,9 +197,7 @@ class pHMeasurementSession:
             self.updateConfig('spec_nscans', int(total_collection_time / max_integration_time), section='DEFAULT')
         
         self.updateConfig('spec_integrationtime', max_integration_time, section='DEFAULT')
-        
-        self.writeConfig()
-        
+                
     def read_spectrometer(self):
         spec = np.zeros_like(self._wv)
         for i in range(self.config.getint('spec_nscans')):
@@ -244,7 +243,7 @@ class pHMeasurementSession:
         self.save_spectrum()
         
         self.updateConfig('setup_file', self._pkl_outfile, section='LAST')
-        
+
         if self.plotting:
             plot_spectrum(self.spectrum, include=['raw', 'scale factor', 'dark corrected'])
         
