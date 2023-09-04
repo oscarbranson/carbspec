@@ -20,7 +20,7 @@ from carbspec.alkalinity import calc_acid_strength, TA_from_pH
 from .plot import plot_spectrum
 
 class pHMeasurementSession:
-    def __init__(self, dye='MCP', config_file=None, save=True, plotting=True, last_analysis=None):
+    def __init__(self, dye='MCP', config_file=None, save=True, plotting=True, use_last_setup=False):
         
         self.dye = dye
         
@@ -77,8 +77,8 @@ class pHMeasurementSession:
             self._new_data_table = True
         
         # load last dark and scale_factor, if given
-        self.last_analysis = last_analysis
-        if self.last_analysis is not None:
+        self.use_last_setup = use_last_setup
+        if self.use_last_setup:
             self.load_last_dark_and_scale_factor()        
 
         # Connect to instruments
@@ -243,16 +243,21 @@ class pHMeasurementSession:
 
         self.save_spectrum()
         
+        self.updateConfig('setup_file', self._pkl_outfile, section='LAST')
+        
         if self.plotting:
             plot_spectrum(self.spectrum, include=['raw', 'scale factor', 'dark corrected'])
         
     def load_last_dark_and_scale_factor(self):
-        s = Spectrum.load(self.last_analysis)
+        
+        file = self._config.get('LAST', 'setup_file')
+        
+        s = Spectrum.load(file)
         
         self.dark = s.dark
         self.scale_factor = s.scale_factor
         
-        print(f'  > Loaded Dark and Scale Factor from last analysis ({self.last_analysis}).')
+        print(f'  > Loaded Dark and Scale Factor from last setup ({file}).')
     
     def make_filenames(self):
         self.filename = f"{self.dye}_{self.timestamp.strftime('%Y%m%d_%H%M%S')}"
