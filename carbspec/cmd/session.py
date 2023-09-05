@@ -359,8 +359,8 @@ class pHMeasurementSession:
         print('Ready to end session. Please now run `exit` to close the session.')
 
 class TAMeasurementSession(pHMeasurementSession):
-    def __init__(self, dye='BPB', config_file=None, save=True, plotting=True, last_analysis=None):
-        super().__init__(dye=dye, config_file=config_file, save=save, plotting=plotting, last_analysis=last_analysis)
+    def __init__(self, dye='BPB', config_file=None, save=True, plotting=True, use_last_setup=False):
+        super().__init__(dye=dye, config_file=config_file, save=save, plotting=plotting, use_last_setup=use_last_setup)
         
         self.sample_weight_spreadsheet = self.config.get('sample_weight_spreadsheet')
         
