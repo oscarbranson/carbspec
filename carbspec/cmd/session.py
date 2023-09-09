@@ -326,7 +326,7 @@ class pHMeasurementSession:
         print(sample_name)
         print(f'  > pH: {pH:.4f}')
                 
-        if self.plotting:
+        if self.plotting and plot_vars is not None:
             plot_spectrum(self.spectrum, fit_p, include=plot_vars)
             
     def save_summary(self):
@@ -474,7 +474,7 @@ class TAMeasurementSession(pHMeasurementSession):
                 
         print(f'  > Acid Strength: {acid_strength:8f} M')
         
-        if self.plotting:
+        if self.plotting and plot_vars is not None:
             plot_spectrum(self.spectrum, fit_p, include=plot_vars)
             
         self.sal = self.config.getfloat('salinity')
@@ -513,5 +513,5 @@ class TAMeasurementSession(pHMeasurementSession):
         print(f'  > pH: {pH:.4f}')
         print(f'  > TA: {TA:.2f} µmol/kg')
                 
-        if self.plotting:
+        if self.plotting and plot_vars is not None:
             plot_spectrum(self.spectrum, fit_p, include=plot_vars)
