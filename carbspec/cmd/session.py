@@ -157,6 +157,50 @@ class pHMeasurementSession:
         for instrument in [self.spectrometer, self.beam_switch, self.temp_probe]:
             if hasattr(instrument, 'disconnect'):
                 instrument.disconnect()
+                
+    def modify_sample(self, variable, value, timestamp=None):
+        if timestamp is None:
+            self.data_table.iloc[-1].name
+        name = self.data_table.loc[timestamp, 'sample']
+        old = self.data_table.loc[timestamp, variable]
+        self.data_table.loc[timestamp, variable] = value
+        
+        print(f'Changed {variable} for sample {name} measured at {timestamp} from {old} to {value}.')
+    
+    def rename_sample(self, new_name, timestamp=None):
+        """Rename a sample and all associated files.
+
+        Parameters
+        ----------
+        new_name : str
+            The new name of the sample.
+        timestamp : datetime, optional
+            The timestamp of the sample to rename. By default None, in which
+            case the most recent sample is renamed.
+        """
+        if timestamp is None:
+            self.data_table.iloc[-1].name
+            
+        old_name = self.data_table.loc[timestamp, 'sample']
+        
+        self.data_table.loc[timestamp, 'sample'] = new_name
+        self.data_table.loc[timestamp, 'spectra'].name = new_name
+        
+        old_dat = self.data_table.loc[timestamp, 'dat_file']
+        new_dat = old_dat.replace(old_name, new_name)
+        self.data_table.loc[timestamp, 'dat_file'] = new_dat
+        os.rename(old_dat, new_dat)
+
+        self._dat_outfile = new_dat
+        
+        old_pkl = self.data_table.loc[timestamp, 'pkl_file']
+        new_pkl = old_pkl.replace(old_name, new_name)
+        self.data_table.loc[timestamp, 'pkl_file'] = old_pkl.replace(old_pkl, new_pkl)
+        os.rename(old_pkl, new_pkl)
+         
+        self._pkl_outfile = new_pkl
+        
+        self.save_summary()
             
     def find_max_integration_time(self, maintain_total_collection_time=True):
         
