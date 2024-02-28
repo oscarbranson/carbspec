@@ -2,7 +2,7 @@ import numpy as np
 import scipy.optimize as opt
 from .species import calc_KF, calc_TF, calc_KS, calc_TS
 
-def TA_from_pH(pH, m_sample, m_acid, sal, temp, C_acid, C_dye=0):
+def TA_from_pH(pH, m_sample, m_acid, sal, temp, C_acid):
     """
     Calculate alkalinity from titration end-point pH.
 
@@ -39,6 +39,8 @@ def TA_from_pH(pH, m_sample, m_acid, sal, temp, C_acid, C_dye=0):
     HSO4 = TS / (1 + KS / Hfree)
     HF = TF / (1 + KF / H)
     
+    # TODO: Implement C_dye correction
+
     return (m_acid * C_acid - (m_sample + m_acid) * (Hfree + HSO4 + HF)) / m_sample
 
 # calculate end pH for a given TA
