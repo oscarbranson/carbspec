@@ -29,7 +29,7 @@ def make_mix_spectra(dye):
 
     def mix_spectra(x, a=1, b=1, bkg=0, c=0, m=1):
         """
-        Predict a spectrum as a mixture of end-member molal absorption factors.
+        Calculated a spectrum as a mixture of end-member molal absorption factors.
 
         Equation: Abs = bkg + a * acid(xm) + b * base(xm)
         where xm = c + x * m
@@ -58,6 +58,57 @@ def make_mix_spectra(dye):
 
     return mix_spectra
 
+def make_mix_components(dye):
+    """
+    Returns a mix_components function incorporating the acid and base splines.
+
+    Parameters
+    ----------
+    dye : str or dict
+        Either the name of the dye you're using, or a dict containing 
+        'acid' and 'base' entries with corresponding 
+        scipy.interpolate.UnivariateSpline objects describing the molal 
+        absorption spectrum of the acid form of the indicator dye across 
+        the entire spectral range.
+
+    Returns
+    -------
+    function : a mix_components function accepting the arguments (a, b, bkg, c, mc)
+    """
+    
+    aspl, bspl = dyes.spline_handler(dye)
+
+    def mix_components(x, a=1, b=1, bkg=0, c=0, m=1):
+        """
+        Predict the individual components of an end-member mixture of molal absorption factors.
+
+        Equation: Abs = bkg + a * acid(xm) + b * base(xm)
+        where xm = c + x * m
+
+        Parameters
+        ----------
+        x : array_like
+            Wavelength
+        a : float
+            acid coefficient
+        b : float
+            base coefficient
+        bkg : float
+            A constant background offset.
+        c : float
+            0th order wavelength adjustment.
+        mc : float
+            1st order wavelength adjustment.
+
+        Returns
+        -------
+        tuple : background, acid, base
+        """
+        xn = c + x * m
+        return bkg, a * aspl(xn), b * bspl(xn)
+
+    return mix_components
+
 def unmix_spectra(wavelength, absorption, dye, sigma=None):
     """
     Determine the relative contribution of acid and base absorption to a measured spectrum.
@@ -78,7 +129,7 @@ def unmix_spectra(wavelength, absorption, dye, sigma=None):
         the entire spectral range.
     weights : bool or array-like
         If True, fit is weighted by the 1/(S**2 + 1), where S is a spectrum at
-        pKdye.
+        pKdyes.
         If array-like, an array the same length as data to use as 
         weights (sigma: larger = less weight).
 
@@ -108,7 +159,7 @@ def pH_from_spectrum(wavelength, spectrum, dye='BPB', sigma=None, temp=25., sal=
     
     F = pe[1] / pe[0]
     
-    dyeK = dyes.K_handler(dye, temp=temp, sal=sal, **kwargs)
+    dyeK = dyes.K_handler(dye=dye, temp=temp, sal=sal, **kwargs)
     
     return pH_from_F(F=F, K=dyeK)
 
@@ -174,7 +225,7 @@ def spec_from_H(wv, H, dyeConc, dye, dyeK=None, temp=25, sal=35):
     a = dyeConc / (1 + dyeK / H)
     b = dyeConc / (1 + H / dyeK)
     
-    return aspl(wv) * a + bspl(wv) * b
+    return aspl(wv) * a + 0.9825 * bspl(wv) * b
 
-def spec_from_pH(wv, pH, dyeConc, dye, dyeK=None):
-    return spec_from_H(wv, 10**-pH, dyeConc, dye, dyeK, temp=25, sal=35)
+def spec_from_pH(wv, pH, dyeConc, dye, temp=25, sal=35, dyeK=None):
+    return spec_from_H(wv, 10**-pH, dyeConc, dye, dyeK, temp=temp, sal=sal)

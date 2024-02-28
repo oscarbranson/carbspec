@@ -69,15 +69,20 @@ class measurePane:
 
         self.sampleName = qt.QLineEdit('SampleName')
         fileLayout.addWidget(qt.QLabel('Sample Name:'), 1, 0, 1, 1)
-        fileLayout.addWidget(self.sampleName, 1, 1, 1, 3)
+        fileLayout.addWidget(self.sampleName, 1, 1, 1, 1)
+
+        self.sampleSalinity = qt.QLineEdit('35')
+        self.sampleSalinity.setValidator(qg.QDoubleValidator())
+        fileLayout.addWidget(qt.QLabel('Salinity:'), 1, 2, 1, 1)
+        fileLayout.addWidget(self.sampleSalinity, 1, 3, 1, 1)
 
         self.measLayout.addWidget(filePaths)
 
         self.collectSpectrum = qt.QPushButton('Collect Spectrum')
-        self.collectSpectrum.setShortcut('Ctrl+Return')
+        self.collectSpectrum.setShortcut('Ctrl+Space')
         self.collectSpectrum.setDisabled(True)
         self.measLayout.addWidget(self.collectSpectrum)
-
+        
         self.collectionPBar = qt.QProgressBar()
         self.collectionPBar.setTextVisible(False)
         self.measLayout.addWidget(self.collectionPBar)
@@ -92,23 +97,46 @@ class measurePane:
         phPane = qt.QWidget(objectName='tabcontents')
         phLayout = qt.QVBoxLayout(phPane)
         self.modeTabs.addTab(phPane, 'pH (MCP)')
+        self.setupPhPane(phLayout)
 
         alkPane = qt.QWidget(objectName='tabcontents')
         alkLayout = qt.QVBoxLayout(alkPane)
         self.modeTabs.addTab(alkPane, 'Alkalinity (BPB)')
+        self.setupAlkPane(alkLayout)
 
         self.last5Table = qt.QTableWidget()
-        self.last5Table.setRowCount(5)
-        self.last5Table.setColumnCount(2)
-        self.last5Table.setHorizontalHeaderLabels(['pH', 'Temperature'])
-        self.last5Table.setVerticalHeaderLabels(self.program.last5['Sample'])
-        for i in range(5):
-            self.last5Table.setItem(0, i, qt.QTableWidgetItem(self.program.last5['pH'][i]))
-            self.last5Table.setItem(1, i, qt.QTableWidgetItem(self.program.last5['Temp'][i]))
+        self.last5Table.horizontalHeader().setSectionResizeMode(qt.QHeaderView.Stretch)
+        self.tableColumns = ['Sample', 'pH', 'Temp', 'Sal']
+        self.tableFmts = ['s', '.3f', '.1f', '.1f']
+        self.last5Table.setColumnCount(len(self.tableColumns))
+        self.last5Table.setHorizontalHeaderLabels(self.tableColumns)
+        self.updateTable()
 
         self.measLayout.addWidget(self.last5Table)
 
         self.layout.addWidget(self.measPane, *pos)
+
+    def setupPhPane(self, layout):
+        self.phControls = {}
+        
+        # re-fit button
+        self.phControls['refit'] = qt.QPushButton('ReFit Data')
+        layout.addWidget(self.phControls['refit'])
+
+    def setupAlkPane(self, layout):
+        self.alkControls = {}
+        
+        # re-fit button
+        self.alkControls['refit'] = qt.QPushButton('ReFit Data')
+        layout.addWidget(self.alkControls['refit'])
+
+    def updateTable(self):
+        last5Table = self.program.df.tail(5).loc[:, self.tableColumns]
+        self.last5Table.setRowCount(len(last5Table.index))
+        self.last5Table.setVerticalHeaderLabels([f'{v:.0f}' for v in last5Table.index[::-1]])
+        for i, ind in enumerate(last5Table.index):
+            for j, col in enumerate(last5Table.columns):
+                self.last5Table.setItem(len(last5Table.index) - i - 1, j, qt.QTableWidgetItem(f'{last5Table.loc[ind,col]:{self.tableFmts[j]}}'))
     
     def setupGraphs(self, *pos):
         self.graphPane = qt.QWidget()
@@ -148,5 +176,19 @@ class measurePane:
     def connections(self):
         # measure and display spectrum
         self.collectSpectrum.clicked.connect(partial(self.program.collectSpectrum, self.graphRaw.lines, 'incremental'))
+        self.collectSpectrum.clicked.connect(self.updateTable)
+        
+        # Re-fit data
+        self.phControls['refit'].clicked.connect(self.program.refitSpectrum)
+        self.phControls['refit'].clicked.connect(self.updateTable)
 
-        self.modeTabs.currentChanged.connect(self.program.modeSet)
+        self.alkControls['refit'].clicked.connect(self.program.refitSpectrum)
+        self.alkControls['refit'].clicked.connect(self.updateTable)
+
+        # Sample name changed
+        self.sampleName.textChanged.connect(partial(self.program.update_parameter, 'Sample', 'Sample', str))
+
+        # temp calibration changed
+        self.sampleSalinity.textChanged.connect(partial(self.program.update_parameter, 'Sal', 'Sal', float))
+
+        self.modeTabs.currentChanged.connect(self.program.dyeSet)

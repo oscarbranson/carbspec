@@ -6,6 +6,7 @@ from program import Program
 from setupPane import setupPane
 from measurePane import measurePane
 import styles
+from pkg_resources import resource_filename
 
 class MainWindow(qt.QMainWindow):
     """
@@ -31,7 +32,7 @@ class MainWindow(qt.QMainWindow):
         self.initUI()
 
         self.set_styleSheet()
-
+    
     def initUI(self):
 
         self.mainWidget = qt.QWidget()
@@ -61,6 +62,9 @@ class MainWindow(qt.QMainWindow):
         self.mainLayout.addWidget(reloadStyle)
         reloadStyle.setShortcut('Shift+Ctrl+R')
         reloadStyle.clicked.connect(self.set_styleSheet)
+        
+        # keyboard shortcuts
+        qt.QShortcut(QtGui.QKeySequence('Ctrl+Q'), self, self.exit)
 
         # # settings tab
         # self.optionsTab = qt.QWidget()
@@ -69,22 +73,24 @@ class MainWindow(qt.QMainWindow):
         # self.tabs.addTab(self.optionsTab, 'Options')
     
     def set_styleSheet(self):
-        with open('./stylesheet.qss', 'r') as f:
+        with open(resource_filename('carbspec', 'gui/stylesheet.qss'), 'r') as f:
             styleSheet = f.read()
         self.setStyleSheet(styleSheet)
-
+    
     def closeEvent(self, event):
         self.program.writeConfig()
+
+        if self.program.spectrometer is not None:
+            msg = f'  -> Disconnected from {self.program.spectrometer.serial_number}'
+            self.program.spectrometer.close()
+            print(msg)
         event.accept()
-    
-    def ping(self):
-        print('ping')
 
     def exit(self):
         app.exit()
 
 if __name__ == '__main__':
-    app = qt.QApplication([])
+    app = qt.QApplication(sys.argv)
     
     app.setStyle('Fusion')
 

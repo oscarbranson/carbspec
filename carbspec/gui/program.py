@@ -1,18 +1,18 @@
-from PyQt5 import QtGui, QtCore
-from dummyInstruments import Spectrometer
 import numpy as np
-from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
-from carbspec.dye import K_handler
-from carbspec.dye.splines import load_splines
+import pandas as pd
+from PyQt5 import QtGui, QtCore
 import pyqtgraph as pg
 import uncertainties as un
 from uncertainties.unumpy import nominal_values, std_devs
-from configparser import ConfigParser
 import pkg_resources as pkgrs
+from configparser import ConfigParser
 
-import pandas as pd
-
+# from carbspec.instruments.dummy import Spectrometer
 import styles
+from carbspec.instruments.spectrometer import Spectrometer
+from carbspec.spectro.mixture import unmix_spectra, make_mix_spectra, pH_from_F
+from carbspec.dye import K_handler
+from carbspec.dye.splines import load_splines
 
 class Program:
     def __init__(self, mainWindow):
@@ -25,13 +25,16 @@ class Program:
         self.collectionMode = 'pH'
         self.darkCollected = False
         self.scaleCollected = False
-
-        self.mode = 'MCP'
-        self.sal = 35
         
         # data placeholder
-        self.data = {}
-        self.df = pd.DataFrame(index=[0], columns=['Sample', 'mode', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH'])
+        dataColumns = ['Sample', 'dye', 'a', 'b', 'bkg', 'c', 'm', 'F', 'Temp', 'Sal', 'K', 'pH']
+        self.data = {k: None for k in dataColumns}
+        self.data['Sample'] = 'SampleName'
+        self.data['Sal'] = 35
+        self.data['Temp'] = 25
+        self.data['dye'] = 'MCP'
+
+        self.df = pd.DataFrame(columns=dataColumns)
 
         self.live = {}
         self.live['wv'] = []
@@ -45,43 +48,18 @@ class Program:
                       'pH': [''] * 5,
                       'Temp': [''] * 5}
 
-        # # Dict of program paramters - load from file in future?
-        # self.params = {}
-        
-        # # Temperature Probe Parameters
-        # self.params['temp'] = {
-        #     'temp_m': 1,
-        #     'temp_c': 0,
-        #     'commLink': None
-        #     }
-        # # Spectrometer Parameters
-        # self.params['spectro'] = {
-        #     'commLink': None,
-        #     'integrationTime': 10,
-        #     'nScans': 50
-        # }
-
         self._rsrcpath = pkgrs.resource_filename('carbspec', '/gui/resources/')
         self._cfgfile = self._rsrcpath + 'carbspec.cfg'
+        self.readConfig()
+        
+        self.spectrometer = None
 
+        self.dyeSet(self.config.get('dye'))
+
+    def readConfig(self):
         self._config = ConfigParser()
         self._config.read(self._cfgfile)
         self.config = self._config['LAST']
-
-        self.connectSpectrometer()
-
-        self.modeSet(self.config.get('mode'))
-
-    # def loadConfig(self):
-        
-        # self.params['spectro']['integrationTime'] = self.config['Last'].get('integrationTime')
-        # self.params['spectro']['nScans'] = self.config['Last'].get('nScans')
-
-        # self.params['temp']['temp_m'] = self.config['Last'].get('temp_m')
-        # self.params['temp']['temp_c'] = self.config['Last'].get('temp_c')
-
-        # self.saveDir = self.config['Last'].get('saveDir')
-        # self.mode = self.config['Last'].get('mode')
 
     def writeConfig(self):
         with open(self._cfgfile, 'w') as f:
@@ -92,16 +70,34 @@ class Program:
             self._config.set('LAST', parameter, str(value))
         
         self.writeConfig()
-
-    def findSpectrometer(self):
-        return ['Spec1', 'Spec2']
     
-    def connectSpectrometer(self):
-        self.spectrometer = Spectrometer()
-        self.data['wv'] = self.spectrometer.wv
+    def connectSpectrometer(self, id=None):
+        if id is not None:
+            # get SN of selected spectrometer
+            spec_id = self.mainWindow.setupPane.spectro['commLink'].currentText()
+            spec_SN = spec_id.split(': SN-')[-1]
+        
+        # connect to spectrometer
+        self.spectrometer = Spectrometer.from_serial_number(spec_SN)
+        self.config.set('LAST', 'spectrometer', spec_id)
+        
+        self.mainWindow.setupPane.spectro['statusLED'].setChecked(True)
+        
+        # apply current settings
+        self.spectrometer.set_integration_time_ms(int(self.mainWindow.setupPane.spectro['integrationTime'].text()))
+        self.spectrometer.set_wavelength_range(
+            wvMin=int(self.mainWindow.setupPane.spectro['wvMin'].text()),
+            wvMax=int(self.mainWindow.setupPane.spectro['wvMax'].text())
+        )
+        
+    def disconnectSpectrometer(self):
+        self.spectrometer.close()
+        self.spectrometer = None
+                
+        self.mainWindow.setupPane.spectro['statusLED'].setChecked(False)
 
     def readSpectrometer(self, line=None, plot_mode='incremental', pbar=None, pbar_0=0):
-        self.incremental['wv'] = self.data['wv']
+        self.incremental['wv'] = self.spectrometer.wv
 
         for i in range(self.config.getint('nScans')):
             meas = self.spectrometer.read()
@@ -114,9 +110,9 @@ class Program:
         
             if line is not None:
                 if plot_mode == 'incremental':
-                    line.curve.setData(x=self.data['wv'], y=self.incremental['signal'])
+                    line.setData(x=self.spectrometer.wv, y=self.incremental['signal'])
                 elif plot_mode == 'live':
-                    line.curve.setData(y=meas)
+                    line.setData(x=self.spectrometer.wv, y=meas)
 
             if pbar is not None:
                 pbar.setValue(i + 1 + pbar_0)
@@ -125,6 +121,9 @@ class Program:
 
     def readTemp(self):
         return np.random.uniform(22,27)
+
+    # def readSampleName(self):
+    #     print(self.mainWindow.measurePane.sampleName.)
 
     def collectDark(self, line, plot_mode):
         
@@ -156,12 +155,11 @@ class Program:
         self.data['channel0'] = self.incremental['signal']
 
         self.spectrometer.channel_1()
-        lines[1].setData(x=self.data['wv'])
         self.readSpectrometer(line=lines[1], plot_mode=plot_mode, pbar=pbar, pbar_0=self.config.getint('nScans'))
         self.data['channel1'] = self.incremental['signal']
 
         self.data['scaleFactor'] = self.data['channel1'] / self.data['channel0']
-        self.mainWindow.setupPane.graphScale.lines[0].curve.setData(x=self.data['wv'], y=self.data['scaleFactor'])
+        self.mainWindow.setupPane.graphScale.lines[0].setData(x=self.spectrometer.wv, y=self.data['scaleFactor'])
         self.scaleCollected = True
 
         self.mainWindow.measurePane.collectSpectrum.setDisabled(False)
@@ -196,18 +194,26 @@ class Program:
             self.specChanged()
         
         if parameter == 'integrationTime' and val is not None:
-            self.spectrometer.set_integration_time(val)
+            self.spectrometer.set_integration_time_ms(val)
         
-        if parameter in ['wvMin', 'wvMax']:
-            self.spectrometer.set_wavelength_range(val, parameter)
-            self.data['wv'] = self.spectrometer.wv
+        if parameter == 'wvMin':
+            self.spectrometer.set_wavelength_range(wvMin=val)
         
+        if parameter == 'wvMax':
+            self.spectrometer.set_wavelength_range(wvMax=val)
+        
+        if parameter in self.data:
+            self.data[parameter] = val
+            
+    def change_spectrometer(self):
+        self.disconnectSpectrometer()
+        self.connectSpectrometer()
 
     def collectSpectrum(self, lines, plot_mode):
         self.mainWindow.measurePane.collectSpectrum.setDisabled(True)
         self.spectrometer.light_on()
         self.spectrometer.sample_present()
-        self.spectrometer.newSample()
+        # self.spectrometer.newSample()
 
         self.clearGraph(self.mainWindow.measurePane.graphAbs)
         self.clearGraph(self.mainWindow.measurePane.graphRaw)
@@ -230,9 +236,9 @@ class Program:
         t1 = self.readTemp()
 
         self.data['absorption'] = np.log10((self.data['channel0'] - self.data['dark']) / (self.data['channel1'] - self.data['dark']))
-        self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.data['wv'], y=self.data['absorption'])
+        self.mainWindow.measurePane.graphAbs.lines[0].setData(x=self.spectrometer.wv, y=self.data['absorption'])
 
-        self.data['temp'] = np.mean([t0, t1])
+        self.data['Temp'] = np.mean([t0, t1])
 
         self.fitSpectrum()
 
@@ -241,31 +247,47 @@ class Program:
 
     def fitSpectrum(self):
         
-        K = K_handler(self.mode, self.data['temp'], self.sal)
+        self.data['K'] = K_handler(self.data['dye'], self.data['Temp'], self.data['Sal'])
         
-        p, cov = unmix_spectra(self.data['wv'], self.data['absorption'], self.mode)
+        try:
+            p, cov = unmix_spectra(self.spectrometer.wv, self.data['absorption'], self.data['dye'])
 
-        self.p = un.correlated_values(p, cov)
+            self.p = un.correlated_values(p, cov)
+            self.data.update({k: v for k, v in zip(['a', 'b', 'bkg', 'c', 'm'], self.p)})
 
-        F = self.p[1] / self.p[0]
+            self.data['F'] = self.p[1] / self.p[0]
 
-        pH = pH_from_F(F, K)
+            self.data['pH'] = pH_from_F(self.data['F'], self.data['K'])
+
+            self.updateFitGraph()
+
+        except ValueError:
+            for k in ['a', 'b', 'bkg', 'c', 'm', 'F', 'pH']:
+                self.data[k] = np.nan
+            self.p = np.full(5, np.nan)
         
-        self.storeResult(K, F, pH)
-        self.updateFitGraph()
+        # self.storeResult(K, F, pH)
+        self.storeResult()
 
-    def storeResult(self, K, F, pH):
-        i = self.df.index.max() + 1
+    # def storeResult(self, K, F, pH):
+    def storeResult(self):
+        i = int(np.nanmax([0, self.df.index.max() + 1]))
+
         self.df.loc[i, ['a', 'b', 'bkg', 'c', 'm']] = self.p
-        self.df.loc[i, ['mode']] = self.mode
-        self.df.loc[i, ['K', 'F', 'pH']] = K, F, pH
-    
+        for k in ['Sample', 'dye', 'F', 'Temp', 'Sal', 'K', 'pH']:
+            self.df.loc[i, k] = self.data[k]
+
+    def refitSpectrum(self):
+        self.df.drop(self.df.index.max(), inplace=True)
+        self.clearFitGraph()
+        self.fitSpectrum()
+
     def updateFitGraph(self):
         p = nominal_values(self.p)
         # draw curves
         graph = self.mainWindow.measurePane.graphAbs
-        mixture = make_mix_spectra(self.mode)
-        x = self.data['wv']
+        mixture = make_mix_spectra(self.data['dye'])
+        x = self.spectrometer.wv
         pred = mixture(x, *p)
         baseline = np.full(x.size, p[2])
         xm = p[-2] + x * p[-1]
@@ -275,11 +297,11 @@ class Program:
         graph.lines['pred'] = pg.PlotDataItem(x=x, y=pred, pen=pg.mkPen(color=styles.colour_main, width=2, style=QtCore.Qt.DashLine))
         graph.addItem(graph.lines['pred'])
 
-        acid_color = list(styles.colour_dark) + [100]
+        acid_color = list(styles.colour_acid) + [100]
         graph.lines['acid'] = pg.PlotCurveItem(x=x, y=acid, brush=pg.mkBrush(*acid_color), fillLevel=0.0, pen=(0,0,0,100))
         graph.addItem(graph.lines['acid'])
 
-        base_color = list(styles.colour_main) + [100]
+        base_color = list(styles.colour_base) + [100]
         graph.lines['base'] = pg.PlotCurveItem(x=x, y=base, brush=pg.mkBrush(*base_color), fillLevel=0.0, pen=(0,0,0,100))
         graph.addItem(graph.lines['base'])
 
@@ -289,26 +311,28 @@ class Program:
 
     def clearFitGraph(self):
         graph = self.mainWindow.measurePane.graphAbs
-        graph.lines['pred'].setData(y=[])
-        graph.lines['acid'].setData(y=[])
-        graph.lines['base'].setData(y=[])
+        for p in ['pred', 'acid', 'base']:
+            if p in graph.lines:
+                graph.lines[p].setData(y=[])
         rgraph = self.mainWindow.measurePane.graphResid
         rgraph.lines[0].setData(y=[])
     
-    def modeSet(self, i):
-        modes = ['MCP', 'BPB']
-        if i in modes:
-            self.mode = i
+    def dyeSet(self, i):
+        dyes = ['MCP', 'BPB']
+        if i in dyes:
+            self.data['dye'] = i
         elif isinstance(i, int):
-            self.mode = modes[i]
+            self.data['dye'] = dyes[i]
         else:
-            ValueError('i musst be an integer or a string')
+            ValueError('i must be an integer or a string')
 
-        self.splines = load_splines(self.mode)
+        self.splines = load_splines(self.data['dye'])
 
         if 'absorption' in self.data:
             self.clearFitGraph()
             self.fitSpectrum()
+
+        print(self.data['dye'])
     
     def clearGraph(self, graph):
         for line in graph.lines.values():

@@ -5,6 +5,8 @@ import pyqtgraph as pg
 import numpy as np
 from functools import partial
 
+from carbspec.instruments.spectrometer import list_spectrometers
+
 import styles
 from graph import GraphItem
 from statusLED import LEDIndicator
@@ -57,6 +59,19 @@ class setupPane:
         self.setupGraphs(0, 1, 3, 1)
         
         self.connections()
+        self.setLastConfig()
+        
+    def refreshSpectrometers(self):
+        print('refreshing spectrometers')
+        self.spectro['commLink'].clear()
+        self.program.spectrometers = list_spectrometers()
+        for spec in self.program.spectrometers:
+            self.spectro['commLink'].addItem(spec)
+        self.setLastConfig()
+            
+    def setLastConfig(self):
+        if self.program.config.get('spectrometer') in self.program.spectrometers:
+            self.program.connectSpectrometer(self.program.config.get('spectrometer'))
 
     def spectrometer(self, *pos):
         
@@ -74,16 +89,25 @@ class setupPane:
 
         # spectrometer connection
         commLink = qt.QComboBox()
-        for spec in self.program.findSpectrometer():
-            commLink.addItem(spec)
         self.spectro['commLink'] = commLink
-        optGrid.addWidget(qt.QLabel('Comm Port:'), current_row, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
+        self.refreshSpectrometers()
+        optGrid.addWidget(qt.QLabel('Spectrometers:'), current_row, 0, 1, 1, alignment=QtCore.Qt.AlignRight)
         optGrid.addWidget(commLink, current_row, 1, 1, 3)
 
-        self.statusSpectrometer = LEDIndicator()
-        optGrid.addWidget(self.statusSpectrometer, current_row, 4, 1, 1)
+        specConnectButton = qt.QPushButton('Connect')
+        self.spectro['specConnectButton'] = specConnectButton
+        optGrid.addWidget(specConnectButton, current_row, 4, 1, 1)
+        
+        statusSpectrometer = LEDIndicator()
+        self.spectro['statusLED'] = statusSpectrometer
+        optGrid.addWidget(statusSpectrometer, current_row, 5, 1, 1)
+        
         current_row += 1
-
+        
+        specRefreshButton = qt.QPushButton('Refresh')
+        self.spectro['specRefreshButton'] = specRefreshButton
+        optGrid.addWidget(specRefreshButton, current_row, 4, 1, 1)
+        
         # spectrometer setup
         integTime = qt.QLineEdit(self.program.config.get('integrationTime'))
         integTime.setValidator(qg.QIntValidator())
@@ -253,6 +277,12 @@ class setupPane:
         self.layout.addWidget(self.graphPane, *pos)
 
     def connections(self):
+        # spectrometer connection
+        self.spectro['specConnectButton'].clicked.connect(self.program.connectSpectrometer)
+        self.spectro['specRefreshButton'].clicked.connect(self.refreshSpectrometers)
+        self.spectro['commLink'].currentIndexChanged.connect(self.program.change_spectrometer)
+        
+        
         # change integration time or nscans
         self.spectro['integrationTime'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'integrationTime', int))
         self.spectro['nScans'].textChanged.connect(partial(self.program.update_parameter, 'spectro', 'nScans', int))
