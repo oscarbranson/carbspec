@@ -9,7 +9,8 @@ def calc_pKBPB(sal):
     Eq 17 of Nand & Ellwood (2018, doi:10.1002/lom3.10253)
 
     Form:
-    pKa = pKa(s=35) + A (35 - sal)
+    
+    pKa = pKa(sal=35) + A (35 - sal)
 
     A = 1.74e-3 +/- 0.8e-4
 
@@ -79,9 +80,12 @@ def calc_KBPB(temp=25, sal=35):
     Eq 17 of Nand & Ellwood (2018, doi:10.1002/lom3.10253)
 
     Form:
-    pKa = pKa(t=35) + A (35 - sal)
+    pKa = pKa(sal=35) + A (35 - sal)
+    K = 10**-pKa + C1 * temp + C2 * temp**2
 
     A = 1.74e-3 +/- 0.8e-4
+    C1 = -2.56020702e-06
+    C2 = 1.00921921e-07
 
     Parameters
     ----------
