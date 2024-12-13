@@ -9,3 +9,5 @@ seabreeze
 # GUI
 PyQt5
 pyqtgraph
+# command-line interface
+pyperclip
