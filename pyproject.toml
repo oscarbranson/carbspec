@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "carbspec"
+dynamic = ["version"]
+description = "Tools for calculating pH and Alkalinity from spectrophotometric data."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Oscar Branson", email = "ob266@cam.ac.uk" }]
+keywords = ["science", "chemistry", "oceanography", "carbon"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "uncertainties",
+    "pyserial",
+    "pymodbus",
+    "seabreeze",
+    "PyQt5",
+    "pyqtgraph",
+]
+
+[project.urls]
+Homepage = "https://github.com/oscarbranson/carbspec"
+
+[tool.setuptools.dynamic]
+version = { attr = "carbspec.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+carbspec = ["resources/*"]

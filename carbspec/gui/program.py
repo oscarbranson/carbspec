@@ -4,7 +4,7 @@ from PyQt5 import QtGui, QtCore
 import pyqtgraph as pg
 import uncertainties as un
 from uncertainties.unumpy import nominal_values, std_devs
-import pkg_resources as pkgrs
+from importlib.resources import files
 from configparser import ConfigParser
 
 # from carbspec.instruments.dummy import Spectrometer
@@ -48,8 +48,8 @@ class Program:
                       'pH': [''] * 5,
                       'Temp': [''] * 5}
 
-        self._rsrcpath = pkgrs.resource_filename('carbspec', '/gui/resources/')
-        self._cfgfile = self._rsrcpath + 'carbspec.cfg'
+        self._rsrcpath = str(files('carbspec').joinpath('gui/resources'))
+        self._cfgfile = str(files('carbspec').joinpath('gui/resources/carbspec.cfg'))
         self.readConfig()
         
         self.spectrometer = None

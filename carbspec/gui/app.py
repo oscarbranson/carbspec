@@ -6,7 +6,7 @@ from program import Program
 from setupPane import setupPane
 from measurePane import measurePane
 import styles
-from pkg_resources import resource_filename
+from importlib.resources import files
 
 class MainWindow(qt.QMainWindow):
     """
@@ -73,7 +73,7 @@ class MainWindow(qt.QMainWindow):
         # self.tabs.addTab(self.optionsTab, 'Options')
     
     def set_styleSheet(self):
-        with open(resource_filename('carbspec', 'gui/stylesheet.qss'), 'r') as f:
+        with files('carbspec').joinpath('gui/stylesheet.qss').open('r', encoding='utf-8') as f:
             styleSheet = f.read()
         self.setStyleSheet(styleSheet)
     

@@ -1,5 +1,5 @@
 import os, shutil
-import pkg_resources as pkgrs
+from importlib.resources import as_file, files
 
 def get_TA_weight_template(dir, overwrite=False):
     """Get the template for the TA weight file.
@@ -13,11 +13,12 @@ def get_TA_weight_template(dir, overwrite=False):
     -------
     None
     """
-    template_path = pkgrs.resource_filename('carbspec', 'cmd/resources/TA_weights.ods')
+    template_path = files('carbspec').joinpath('cmd/resources/TA_weights.ods')
 
     savepath = os.path.join(dir, 'TA_weights.ods')
     
     if os.path.exists(savepath) and not overwrite:
         raise ValueError('TA_weights.ods already exists in this directory. Set overwrite=True to overwrite.')
     
-    shutil.copy2(template_path, dir)
+    with as_file(template_path) as src_path:
+        shutil.copy2(src_path, dir)

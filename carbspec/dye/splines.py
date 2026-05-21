@@ -1,6 +1,6 @@
 import json
 import numpy as np
-import pkg_resources as pkgrs
+from importlib.resources import files
 from scipy.interpolate import UnivariateSpline
 
 def spline_handler(dye):
@@ -23,7 +23,7 @@ def spline_handler(dye):
 
 def load_spline_tcks(file=None):
     if file is None:
-        file = pkgrs.resource_filename('carbspec','resources/splines.json')
+        file = str(files('carbspec').joinpath('resources/splines.json'))
     with open(file, 'r') as f:
         splns = json.load(f)
     return splns
@@ -53,7 +53,7 @@ def save_spline(spln, dye, form, file=None, append=True, overwrite=False):
         in the database.
     """
     if file is None:
-        file = pkgrs.resource_filename('carbspec','resources/splines.json')
+        file = str(files('carbspec').joinpath('resources/splines.json'))
 
     if append:
         try:

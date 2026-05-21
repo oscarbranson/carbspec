@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from configparser import ConfigParser
-import pkg_resources as pkgrs
+from importlib.resources import files
 import time
 import pyperclip
 
@@ -25,7 +25,7 @@ class pHMeasurementSession:
         self.dye = dye
         
         if config_file is None:
-            config_file = pkgrs.resource_filename('carbspec', '/cmd/resources/carbspec.cfg')
+            config_file = str(files('carbspec').joinpath('cmd/resources/carbspec.cfg'))
         self.config_file = config_file
         self.readConfig()
         
