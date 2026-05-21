@@ -1,10 +1,10 @@
 .PHONY: build upload distribute
 
 build:
-	python setup.py sdist bdist_wheel
+	python -m build
 
 upload:
-	twine upload dist/carbspec-$$(python setup.py --version)*
+	twine upload dist/carbspec-$$(python -c 'import carbspec; print(carbspec.__version__)')*
 
 distribute:
 	make build
